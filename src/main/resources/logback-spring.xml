@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="false">
+    <contextName>Logback For GlxtApiServer</contextName>
+    <!-- 设置log日志存放地址 -->
+    <!--（改）单环境设置 -->
+    <springProfile name="local">
+        <property name="log.path" value="./target/logs/glxt-api" />
+    </springProfile>
+    <springProfile name="!local">
+        <property name="log.path" value="/var/log/glxt-api" />
+    </springProfile>
+    <!-- 多环境设置 -->
+    <!--
+    <springProfile name="dev">
+        <property name="LOG_HOME" value="/Users/liuyanzhao/Desktop/temp/log"/>
+    </springProfile>
+    -->
+    <!-- 控制台输出 -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- encoder默认配置为PatternLayoutEncoder -->
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{80} -%msg%n</pattern>
+        </encoder>
+        <target>System.out</target>
+    </appender>
+    <!-- 按照每天生成日志文件 -->
+    <appender name="file_info" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!--<File>${log.path}/info_${POD_NAME}.log</File>-->
+        <File>${log.path}/info.log</File>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!--日志文件输出的文件名，每天保存（侧翻）一次 -->
+            <FileNamePattern>${log.path}/info.%d{yyyy-MM-dd}_%i.log</FileNamePattern>
+            <!--日志文件保留天数 -->
+            <MaxHistory>30</MaxHistory>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>100MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{25} -%msg%n</pattern>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>INFO</level>
+        </filter>
+    </appender>
+
+    <appender name="file_error" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>${log.path}/error.log</File>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!--日志文件输出的文件名，每天保存（侧翻）一次 -->
+            <FileNamePattern>${log.path}/error.%d{yyyy-MM-dd}_%i.log</FileNamePattern>
+            <!--日志文件保留天数 -->
+            <MaxHistory>30</MaxHistory>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>100MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{25} -%msg%n</pattern>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <!--onMatch="ACCEPT" 表示匹配该级别及以上-->
+            <!--onMatch="DENY" 表示不匹配该级别及以上-->
+            <!--onMatch="NEUTRAL" 表示该级别及以上的，由下一个filter处理，如果当前是最后一个，则表示匹配该级别及以上-->
+            <!--onMismatch="ACCEPT" 表示匹配该级别以下-->
+            <!--onMismatch="NEUTRAL" 表示该级别及以下的，由下一个filter处理，如果当前是最后一个，则不匹配该级别以下的-->
+            <!--onMismatch="DENY" 表示不匹配该级别以下的-->
+            <level>ERROR</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <!--（改）过滤器，可以指定哪些包，哪个记录到等级，-->
+    <!--运用的场景比如，你只需要com.demo.controller包下的error日志输出。定义好name="com.demo.controller" level="ERROR"就行了 -->
+    <!--
+    <logger name="com.citics" level="INFO">
+        <appender-ref ref="file_info"/>
+    </logger>
+    -->
+    <!--
+    <Logger name="com.citics" level="ERROR">
+        <appender-ref ref="file_error" />
+    </Logger>
+    -->
+
+    <!-- 全局，控制台遇到INFO及以上级别就进行输出 -->
+    <root level="INFO">
+        <appender-ref ref="STDOUT" />
+        <appender-ref ref="file_info" />
+        <appender-ref ref="file_error" />
+    </root>
+
+</configuration>

@@ -1,0 +1,36 @@
+server:
+  port: ${SERVER_PORT:15009}
+
+spring:
+  application:
+    name: ${APPLICATION_NAME:glxt-api}
+  cloud:
+    bus:
+      enabled: true
+      trace:
+        enabled: true
+    nacos:
+      username: ${NACOS_USERNAME:glxt}
+      password: ${NACOS_PASSWORD:glxt123}
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:10.23.114.39:33848}
+        namespace: ${NACOS_DISCOVERY_NAMESPACE:glxt}
+        #        fail-fast: false   # 注册失败重试 是否启用快速失败（默认true，失败后重试）
+        watch:
+          enabled: true   # 订阅服务列表失败重试 启用监听自动重连（默认true）
+      config:
+        file-extension: yaml
+        #        prefix:
+        group: ${NACOS_CONFIG_GROUP:DEFAULT_GROUP}
+        server-addr: ${NACOS_SERVER_ADDR:10.23.114.39:33848}
+        namespace: ${NACOS_CONFIG_NAMESPACE:glxt}
+        max-retry: 5        # 配置获取失败时的最大重试次数（默认3）
+        config-retry-time: 2000  # 重试间隔（毫秒，默认1000）
+        timeout: 5000          # 单次请求超时时间（默认3000ms）
+#        refresh:
+#          enabled: true
+# zipkin:
+#  base-url: http://10.23.114.51:9411/
+# sleuth:
+#  sampler:
+#    probability: 1
