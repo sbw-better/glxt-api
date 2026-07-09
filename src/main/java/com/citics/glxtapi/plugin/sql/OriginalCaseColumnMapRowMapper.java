@@ -6,7 +6,7 @@ import org.springframework.jdbc.support.JdbcUtils;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -23,7 +23,7 @@ public class OriginalCaseColumnMapRowMapper implements RowMapper<Map<String, Obj
     public Map<String, Object> mapRow(ResultSet rs, int rowNum) throws SQLException {
         ResultSetMetaData metaData = rs.getMetaData();
         int columnCount = metaData.getColumnCount();
-        Map<String, Object> map = new HashMap<>(columnCount);
+        Map<String, Object> map = new LinkedHashMap<>(columnCount);
 
         for (int i = 1; i <= columnCount; i++) {
             // 获取列别名（就是 AS "xxx" 里的 xxx，原样返回）

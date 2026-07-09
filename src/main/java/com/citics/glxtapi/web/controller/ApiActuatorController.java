@@ -59,6 +59,40 @@ public class ApiActuatorController {
         }
     }
 
+    @ApiOperation(value = "执行SQL结果导出EXCEL", notes = "执行SQL结果导出EXCEL")
+    @MethodLog(desc = "执行SQL结果导出EXCEL")
+    @ResponseBody
+    @PostMapping("/execute/export")
+    public ResultModel<?> executeExport(@RequestBody String apiActuatorInfo, HttpServletRequest req) {
+        long consumeTime;
+        long startTime = System.currentTimeMillis();
+        Integer res = SQL_EXECUTE_SUCCESS;
+        String fileName = null;
+        String msg = "";
+        try {
+            fileName = apiActuatorService.executeExport(apiActuatorInfo, req);
+        } catch (OpenException e) {
+            e.printStackTrace();
+            msg = e.getMessage();
+            res = SQL_EXECUTE_FAIL;
+        } catch (Exception e) {
+            e.printStackTrace();
+            msg = e.getMessage();
+            res = SQL_EXECUTE_FAIL_PRIVATE;
+        } finally {
+            consumeTime = System.currentTimeMillis() - startTime;
+        }
+
+        this.apiActuatorService.insertAfterExecute(apiActuatorInfo, req, res.equals(SQL_EXECUTE_SUCCESS), res.equals(SQL_EXECUTE_SUCCESS) ? null : msg, consumeTime);
+        if (res.equals(SQL_EXECUTE_SUCCESS)) {
+            return ResultModel.success(fileName);
+        } else if (res.equals(SQL_EXECUTE_FAIL)) {
+            return ResultModel.error("操作失败：" + msg);
+        } else {
+            return ResultModel.error("执行时出错，或SQL语句可能存在注入风险，请联系管理员处理！" + msg);
+        }
+    }
+
     @ApiOperation(value = "测试SQL前校验", notes = "测试SQL前校验")
     @MethodLog(desc = "测试SQL前校验")
     @ResponseBody

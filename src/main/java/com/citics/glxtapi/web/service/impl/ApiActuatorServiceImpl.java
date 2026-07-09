@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.citics.glxtapi.common.factory.PageFactory;
 import com.citics.glxtapi.common.page.PageResult;
 import com.citics.glxtapi.common.utils.date.DateUtils;
+import com.citics.glxtapi.common.utils.excel.ExcelExportUtils;
 import com.citics.glxtapi.common.utils.http.IpUtil;
 import com.citics.glxtapi.common.utils.page.PageUtils;
 import com.citics.glxtapi.plugin.db.support.DdConstants;
@@ -28,6 +29,7 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.text.SimpleDateFormat;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -106,6 +108,15 @@ public class ApiActuatorServiceImpl extends ServiceImpl<ApiActuatorMapper, ApiAc
 
         // 返回执行结果
         return sqlRes;
+    }
+
+    @Override
+    public String executeExport(String apiActuatorInfo, HttpServletRequest req) {
+        Object sqlRes = this.execute(apiActuatorInfo, req);
+        JSONObject apiActuatorInfoJson = JSON.parseObject(apiActuatorInfo);
+        String apiCode = apiActuatorInfoJson.getString("apiCode");
+        String workbookName = (StringUtils.isEmpty(apiCode) ? "export" : apiCode) + "_" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+        return ExcelExportUtils.exportName(sqlRes, workbookName);
     }
 
     @Override

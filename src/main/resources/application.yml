@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8090
 
 spring:
   application:
@@ -10,3 +10,5 @@ spring:
 common:
   execute_test_max_count: 100
   sql_result_page_max_row: 5000
+
+  demo_path: D:/demo/interface

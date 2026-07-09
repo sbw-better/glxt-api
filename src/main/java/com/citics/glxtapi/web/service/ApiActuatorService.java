@@ -11,6 +11,8 @@ public interface ApiActuatorService extends IService<ApiActuator> {
 
     Object execute(String apiActuatorInfo, HttpServletRequest req);
 
+    String executeExport(String apiActuatorInfo, HttpServletRequest req);
+
     PageResult page(ApiActuatorDTO dto);
 
     void insertAfterExecute(String apiActuatorInfo, HttpServletRequest req, boolean success, Object sqlRes, long consumeTime);
