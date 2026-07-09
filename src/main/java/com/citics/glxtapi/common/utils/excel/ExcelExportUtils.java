@@ -10,7 +10,6 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -32,12 +31,8 @@ public class ExcelExportUtils {
     private ExcelExportUtils() {
     }
 
-    public static byte[] toExcelBytes(Object result) {
-        return toExcelBytes(extractRows(result), DEFAULT_SHEET_NAME);
-    }
-
     public static String exportName(Object result, String workbookName) {
-        String fileName = UUID.randomUUID().toString() + "_" + workbookName + ".xlsx";
+        String fileName = UUID.randomUUID() + "_" + workbookName + ".xlsx";
         export(result, DEFAULT_SHEET_NAME, fileName);
         return fileName;
     }
@@ -55,24 +50,6 @@ public class ExcelExportUtils {
             return (List<Map<String, Object>>) result;
         }
         throw new IllegalArgumentException("SQL执行结果不支持导出Excel");
-    }
-
-    private static byte[] toExcelBytes(List<Map<String, Object>> rows, String sheetName) {
-        SXSSFWorkbook workbook = new SXSSFWorkbook(100);
-        try {
-            Sheet sheet = workbook.createSheet(sheetName);
-            List<String> headers = collectHeaders(rows);
-            writeHeader(sheet, headers);
-            writeBody(workbook, sheet, headers, rows);
-            resizeColumns(sheet, headers.size());
-            return writeWorkbook(workbook);
-        } finally {
-            workbook.dispose();
-            try {
-                workbook.close();
-            } catch (IOException ignored) {
-            }
-        }
     }
 
     private static void export(Object result, String sheetName, String fileName) {
@@ -160,15 +137,6 @@ public class ExcelExportUtils {
         }
     }
 
-    private static byte[] writeWorkbook(Workbook workbook) {
-        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            workbook.write(outputStream);
-            return outputStream.toByteArray();
-        } catch (IOException e) {
-            throw new IllegalStateException("生成Excel文件失败", e);
-        }
-    }
-
     private static void writeWorkbook(Workbook workbook, String fileName) {
         File file = new File(ToolUtil.getDownloadPath() + fileName);
         File parentFile = file.getParentFile();
@@ -178,7 +146,7 @@ public class ExcelExportUtils {
         try (OutputStream outputStream = new FileOutputStream(file)) {
             workbook.write(outputStream);
         } catch (IOException e) {
-            throw new IllegalStateException("鐢熸垚Excel鏂囦欢澶辫触", e);
+            throw new IllegalStateException("生成Excel文件失败", e);
         }
     }
 }

@@ -14,6 +14,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.FileInputStream;
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -78,6 +79,24 @@ public class ExcelExportUtilsTest {
             assertEquals("status", sheet.getRow(0).getCell(1).getStringCellValue());
             assertEquals("A001", sheet.getRow(1).getCell(0).getStringCellValue());
             assertEquals("", sheet.getRow(1).getCell(1).getStringCellValue());
+        } finally {
+            workbook.close();
+        }
+    }
+
+    @Test
+    public void exportNameWritesEmptyWorkbookForEmptyRows() throws Exception {
+        System.setProperty("java.io.tmpdir", temporaryFolder.getRoot().getAbsolutePath());
+
+        String fileName = ExcelExportUtils.exportName(Collections.emptyList(), "empty_result");
+
+        File excelFile = new File(ToolUtil.getDownloadPath(), fileName);
+        assertTrue(excelFile.exists());
+        Workbook workbook = WorkbookFactory.create(new FileInputStream(excelFile));
+        try {
+            Sheet sheet = workbook.getSheet("result");
+            assertNotNull(sheet);
+            assertEquals(0, sheet.getLastRowNum());
         } finally {
             workbook.close();
         }
