@@ -83,8 +83,10 @@ public class ApiActuatorController {
             consumeTime = System.currentTimeMillis() - startTime;
         }
 
+        // 导出成功时只记录执行结果，不记录查询明细或Excel内容，避免调用日志表存放大对象。
         this.apiActuatorService.insertAfterExecute(apiActuatorInfo, req, res.equals(SQL_EXECUTE_SUCCESS), res.equals(SQL_EXECUTE_SUCCESS) ? null : msg, consumeTime);
         if (res.equals(SQL_EXECUTE_SUCCESS)) {
+            // 对齐通用下载流程：这里返回临时文件名，文件流由/api/common/download统一处理。
             return ResultModel.success(fileName);
         } else if (res.equals(SQL_EXECUTE_FAIL)) {
             return ResultModel.error("操作失败：" + msg);

@@ -24,6 +24,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * SQL执行结果动态导出工具。
+ * <p>
+ * SQL返回字段不固定，所以这里按Map的key动态生成表头，并把文件写入通用下载目录。
+ * </p>
+ */
 public class ExcelExportUtils {
 
     private static final String DEFAULT_SHEET_NAME = "result";
@@ -43,6 +49,7 @@ public class ExcelExportUtils {
             return new ArrayList<>();
         }
         if (result instanceof PageInfoResult) {
+            // 分页导出只导出当前页list，不在这里做全量翻页查询。
             List<Map<String, Object>> list = ((PageInfoResult) result).getList();
             return list == null ? new ArrayList<>() : list;
         }
@@ -53,6 +60,7 @@ public class ExcelExportUtils {
     }
 
     private static void export(Object result, String sheetName, String fileName) {
+        // 使用SXSSFWorkbook降低大结果集导出时的内存占用。
         SXSSFWorkbook workbook = new SXSSFWorkbook(100);
         try {
             Sheet sheet = workbook.createSheet(sheetName);
@@ -72,6 +80,7 @@ public class ExcelExportUtils {
     }
 
     private static List<String> collectHeaders(List<Map<String, Object>> rows) {
+        // 动态SQL每行字段可能不完全一致，按首次出现顺序取所有字段并集作为表头。
         Set<String> headers = new LinkedHashSet<>();
         for (Map<String, Object> row : rows) {
             if (row != null) {

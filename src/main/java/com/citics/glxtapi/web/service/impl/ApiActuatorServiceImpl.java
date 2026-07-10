@@ -112,9 +112,11 @@ public class ApiActuatorServiceImpl extends ServiceImpl<ApiActuatorMapper, ApiAc
 
     @Override
     public String executeExport(String apiActuatorInfo, HttpServletRequest req) {
+        // 复用execute，确保导出和普通查询的SQL拼接、权限校验、分页规则保持一致。
         Object sqlRes = this.execute(apiActuatorInfo, req);
         JSONObject apiActuatorInfoJson = JSON.parseObject(apiActuatorInfo);
         String apiCode = apiActuatorInfoJson.getString("apiCode");
+        // ExcelExportUtils会在文件名前追加UUID，避免不同请求生成的临时文件互相覆盖。
         String workbookName = (StringUtils.isEmpty(apiCode) ? "export" : apiCode) + "_" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
         return ExcelExportUtils.exportName(sqlRes, workbookName);
     }

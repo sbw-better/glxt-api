@@ -11,6 +11,9 @@ public interface ApiActuatorService extends IService<ApiActuator> {
 
     Object execute(String apiActuatorInfo, HttpServletRequest req);
 
+    /**
+     * 执行SQL并生成临时Excel文件，返回给前端用于通用下载接口的文件名。
+     */
     String executeExport(String apiActuatorInfo, HttpServletRequest req);
 
     PageResult page(ApiActuatorDTO dto);

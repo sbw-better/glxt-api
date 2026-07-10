@@ -23,6 +23,7 @@ public class OriginalCaseColumnMapRowMapper implements RowMapper<Map<String, Obj
     public Map<String, Object> mapRow(ResultSet rs, int rowNum) throws SQLException {
         ResultSetMetaData metaData = rs.getMetaData();
         int columnCount = metaData.getColumnCount();
+        // 保留数据库返回列顺序，后续动态Excel导出表头会按Map顺序生成。
         Map<String, Object> map = new LinkedHashMap<>(columnCount);
 
         for (int i = 1; i <= columnCount; i++) {
