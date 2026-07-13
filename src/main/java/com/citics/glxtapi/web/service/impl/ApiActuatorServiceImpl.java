@@ -70,6 +70,7 @@ public class ApiActuatorServiceImpl extends ServiceImpl<ApiActuatorMapper, ApiAc
         String apiCode = apiActuatorInfoJson.getString("apiCode");
         Boolean fieldAuth = apiActuatorInfoJson.getBoolean("fieldAuth");
         Boolean pageNeed = apiActuatorInfoJson.getBoolean("pageNeed");
+        Boolean exportExcel = apiActuatorInfoJson.getBoolean("exportExcel");
         String ip = IpUtil.getClientIp(req);
 
         // 校验、入参处理
@@ -106,19 +107,14 @@ public class ApiActuatorServiceImpl extends ServiceImpl<ApiActuatorMapper, ApiAc
             this.tenantService.clearDs();
         }
 
+        if (Boolean.TRUE.equals(exportExcel)) {
+            // 复用execute主流程完成SQL校验和查询后，再按通用下载约定返回临时Excel文件名。
+            String workbookName = (StringUtils.isEmpty(apiCode) ? "export" : apiCode) + "_" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+            return ExcelExportUtils.exportName(sqlRes, workbookName);
+        }
+
         // 返回执行结果
         return sqlRes;
-    }
-
-    @Override
-    public String executeExport(String apiActuatorInfo, HttpServletRequest req) {
-        // 复用execute，确保导出和普通查询的SQL拼接、权限校验、分页规则保持一致。
-        Object sqlRes = this.execute(apiActuatorInfo, req);
-        JSONObject apiActuatorInfoJson = JSON.parseObject(apiActuatorInfo);
-        String apiCode = apiActuatorInfoJson.getString("apiCode");
-        // ExcelExportUtils会在文件名前追加UUID，避免不同请求生成的临时文件互相覆盖。
-        String workbookName = (StringUtils.isEmpty(apiCode) ? "export" : apiCode) + "_" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
-        return ExcelExportUtils.exportName(sqlRes, workbookName);
     }
 
     @Override

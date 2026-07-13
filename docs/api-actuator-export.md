@@ -2,22 +2,21 @@
 
 ## 调用流程
 
-1. 前端调用导出接口生成临时 Excel 文件。
-2. 导出接口返回临时文件名。
-3. 前端拿返回的文件名调用通用下载接口下载文件。
+1. 前端调用 `/api/actuator/execute`。
+2. 请求体不传 `exportExcel` 或传 `false` 时，接口直接返回原 SQL 查询结果。
+3. 请求体传 `exportExcel=true` 时，接口生成临时 Excel 文件，并返回临时文件名。
+4. 前端拿返回的文件名调用 `/api/common/download` 下载文件。
 
-导出接口不会直接返回文件流。
+导出不再使用单独的导出接口。
 
-## 1. 生成导出文件
+## 1. 执行 SQL 或生成导出文件
 
-- URL: `/api/actuator/execute/export`
+- URL: `/api/actuator/execute`
 - Method: `POST`
 - Content-Type: `application/json`
 - Response: 统一 `ResultModel`
 
-请求体与 `/api/actuator/execute` 保持一致。
-
-### 请求示例
+### 查询请求示例
 
 ```json
 {
@@ -35,13 +34,32 @@
 }
 ```
 
-### 成功响应
+### 导出请求示例
+
+```json
+{
+  "tenant": "demo",
+  "apiCode": "demoApi",
+  "token": "调用token",
+  "systemCode": "front-system",
+  "exportExcel": true,
+  "fieldAuth": false,
+  "pageNeed": true,
+  "pageNum": 1,
+  "pageSize": 20,
+  "params": {
+    "status": "1"
+  }
+}
+```
+
+### 导出成功响应
 
 ```json
 {
   "code": 0,
-  "message": "操作成功",
-  "data": "0d4c7b54-7d59-4c17-a4af-76a68b3f2201_demoApi_20260630153000.xlsx"
+  "message": "操作成功！",
+  "data": "0d4c7b54-7d59-4c17-a4af-76a68b3f2201_demoApi_20260710153000.xlsx"
 }
 ```
 
@@ -70,7 +88,7 @@
 
 ```json
 {
-  "fileName": "0d4c7b54-7d59-4c17-a4af-76a68b3f2201_demoApi_20260630153000.xlsx",
+  "fileName": "0d4c7b54-7d59-4c17-a4af-76a68b3f2201_demoApi_20260710153000.xlsx",
   "delete": true,
   "timeStamp": false
 }
@@ -80,47 +98,9 @@
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `fileName` | string | 是 | 第一步导出接口返回的 `data` |
+| `fileName` | string | 是 | `/api/actuator/execute` 导出成功时返回的 `data` |
 | `delete` | boolean | 否 | 是否下载后删除临时文件，建议传 `true` |
 | `timeStamp` | boolean | 否 | 是否由下载接口再追加时间戳，建议传 `false` |
-
-## 前端处理建议
-
-导出接口响应是 JSON，下载接口响应是文件流，两次请求的响应类型不同。
-
-```js
-async function exportSqlResult(payload) {
-  const exportResp = await fetch('/api/actuator/execute/export', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  }).then(res => res.json());
-
-  if (exportResp.code !== 0) {
-    throw new Error(exportResp.message || '导出失败');
-  }
-
-  const downloadResp = await fetch('/api/common/download', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      fileName: exportResp.data,
-      delete: true,
-      timeStamp: false
-    })
-  });
-
-  const blob = await downloadResp.blob();
-  const disposition = downloadResp.headers.get('Content-Disposition') || '';
-  const fileName = decodeURIComponent((disposition.match(/filename=([^;]+)/) || [])[1] || exportResp.data);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = fileName;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-```
 
 ## 导出范围
 

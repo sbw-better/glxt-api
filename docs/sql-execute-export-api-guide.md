@@ -1,36 +1,35 @@
-# SQL 执行结果导出接口说明
+# SQL 执行与导出接口说明
 
 适用项目：glxt-api
 
-文档版本：v1.2
+文档版本：v2.0
 
-更新日期：2026-07-09
+更新日期：2026-07-10
 
 ## 1. 接口概览
 
 | 接口 | 方法 | 说明 | 响应 |
 | --- | --- | --- | --- |
-| `/api/actuator/execute/export` | POST | 执行 SQL，并生成临时 Excel 文件 | JSON，返回文件名 |
+| `/api/actuator/execute` | POST | 执行 SQL；可通过 `exportExcel` 控制返回查询数据或生成 Excel 文件 | JSON |
 | `/api/common/download` | POST | 根据文件名下载临时文件 | 文件流 |
 
 说明：
 
-- `/api/actuator/execute/export` 不直接返回文件流。
-- 导出接口成功后返回临时文件名。
-- 文件下载由 `/api/common/download` 完成。
-- 原 `/api/actuator/execute` 查询接口保持不变。
+- 不再单独提供导出接口。
+- `exportExcel` 不传或为 `false` 时，`/api/actuator/execute` 保持原逻辑，直接返回 SQL 查询数据。
+- `exportExcel=true` 时，`/api/actuator/execute` 生成临时 Excel 文件，并在 `data` 中返回文件名。
+- 文件下载仍通过 `/api/common/download` 完成。
 
-## 2. 生成导出文件
+## 2. 执行 SQL 或生成导出文件
 
 ### 2.1 基本信息
 
 | 项 | 值 |
 | --- | --- |
-| URL | `/api/actuator/execute/export` |
+| URL | `/api/actuator/execute` |
 | Method | POST |
 | Content-Type | `application/json` |
-| 返回类型 | `ResultModel<String>` |
-| 成功返回数据 | 临时 Excel 文件名 |
+| 返回类型 | `ResultModel<?>` |
 
 ### 2.2 请求参数
 
@@ -40,25 +39,14 @@
 | `apiCode` | string | 是 | 接口代码。 |
 | `token` | string | 是 | 接口调用 token，用于权限校验。 |
 | `systemCode` | string | 是 | 调用方系统代码。 |
+| `exportExcel` | boolean | 否 | 是否导出 Excel。`true` 表示生成 Excel 并返回文件名；不传或 `false` 表示返回原查询数据。 |
 | `fieldAuth` | boolean | 否 | 字段鉴权开关，一般可不传。 |
 | `pageNeed` | boolean | 否 | 是否分页。`true` 表示分页，`false` 表示不分页，不传时以后端接口配置为准。 |
 | `pageNum` | integer | 分页时必填 | 当前页码，从 1 开始。 |
 | `pageSize` | integer | 分页时必填 | 每页条数，最大不能超过 `common.sql_result_page_max_row`，当前为 5000。 |
 | `params` | object | 按接口配置 | SQL 动态入参。不同接口参数不同。 |
 
-### 2.3 params 参数说明
-
-`params` 中的字段由接口配置决定。后端会校验参数是否存在、必填参数是否完整、参数类型是否正确。
-
-特殊鉴权字段：
-
-| 字段 | 类型 | 说明 |
-| --- | --- | --- |
-| `managerField` | integer | 投顾或经理维度鉴权字段。 |
-| `fundIdsField` | string | 产品 ID 列表鉴权字段。 |
-| `fundCodesField` | string | 产品代码列表鉴权字段。 |
-
-### 2.4 请求示例
+### 2.3 查询请求示例
 
 ```json
 {
@@ -66,7 +54,6 @@
   "apiCode": "demoApi",
   "token": "调用token",
   "systemCode": "front-system",
-  "fieldAuth": false,
   "pageNeed": true,
   "pageNum": 1,
   "pageSize": 20,
@@ -76,13 +63,48 @@
 }
 ```
 
-### 2.5 成功响应
+### 2.4 查询成功响应
 
 ```json
 {
   "code": 0,
   "message": "操作成功！",
-  "data": "0d4c7b54-7d59-4c17-a4af-76a68b3f2201_demoApi_20260709153000.xlsx"
+  "data": {
+    "pageNum": 1,
+    "pageSize": 20,
+    "total": 31,
+    "list": []
+  }
+}
+```
+
+说明：查询响应数据结构由 SQL 是否分页以及查询结果决定，保持原逻辑不变。
+
+### 2.5 导出请求示例
+
+```json
+{
+  "tenant": "demo",
+  "apiCode": "demoApi",
+  "token": "调用token",
+  "systemCode": "front-system",
+  "exportExcel": true,
+  "pageNeed": true,
+  "pageNum": 1,
+  "pageSize": 20,
+  "params": {
+    "status": "1"
+  }
+}
+```
+
+### 2.6 导出成功响应
+
+```json
+{
+  "code": 0,
+  "message": "操作成功！",
+  "data": "0d4c7b54-7d59-4c17-a4af-76a68b3f2201_demoApi_20260710153000.xlsx"
 }
 ```
 
@@ -92,9 +114,9 @@
 | --- | --- | --- |
 | `code` | integer | `0` 表示成功。 |
 | `message` | string | 响应消息。 |
-| `data` | string | 临时 Excel 文件名，用于调用下载接口。 |
+| `data` | string | `exportExcel=true` 时为临时 Excel 文件名，用于调用下载接口。 |
 
-### 2.6 失败响应
+### 2.7 失败响应
 
 ```json
 {
@@ -132,7 +154,7 @@
 
 | 字段 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
-| `fileName` | string | 是 | 无 | 导出接口返回的 `data`。 |
+| `fileName` | string | 是 | 无 | `/api/actuator/execute` 在 `exportExcel=true` 时返回的 `data`。 |
 | `delete` | boolean | 否 | true | 下载后是否删除临时文件。 |
 | `timeStamp` | boolean | 否 | true | 下载文件名是否追加当前时间戳。 |
 
@@ -140,7 +162,7 @@
 
 ```json
 {
-  "fileName": "0d4c7b54-7d59-4c17-a4af-76a68b3f2201_demoApi_20260709153000.xlsx",
+  "fileName": "0d4c7b54-7d59-4c17-a4af-76a68b3f2201_demoApi_20260710153000.xlsx",
   "delete": true,
   "timeStamp": false
 }
@@ -170,6 +192,7 @@
 
 | 规则 | 说明 |
 | --- | --- |
+| 导出入口 | `/api/actuator/execute`，请求体中传 `exportExcel=true`。 |
 | 导出范围 | 分页查询导出当前页数据；非分页查询导出本次 SQL 返回的数据。 |
 | Sheet 名称 | 固定为 `result`。 |
 | 表头 | 使用 SQL 返回字段名。 |

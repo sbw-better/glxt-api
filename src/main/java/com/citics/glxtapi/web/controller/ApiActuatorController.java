@@ -59,42 +59,6 @@ public class ApiActuatorController {
         }
     }
 
-    @ApiOperation(value = "执行SQL结果导出EXCEL", notes = "执行SQL结果导出EXCEL")
-    @MethodLog(desc = "执行SQL结果导出EXCEL")
-    @ResponseBody
-    @PostMapping("/execute/export")
-    public ResultModel<?> executeExport(@RequestBody String apiActuatorInfo, HttpServletRequest req) {
-        long consumeTime;
-        long startTime = System.currentTimeMillis();
-        Integer res = SQL_EXECUTE_SUCCESS;
-        String fileName = null;
-        String msg = "";
-        try {
-            fileName = apiActuatorService.executeExport(apiActuatorInfo, req);
-        } catch (OpenException e) {
-            e.printStackTrace();
-            msg = e.getMessage();
-            res = SQL_EXECUTE_FAIL;
-        } catch (Exception e) {
-            e.printStackTrace();
-            msg = e.getMessage();
-            res = SQL_EXECUTE_FAIL_PRIVATE;
-        } finally {
-            consumeTime = System.currentTimeMillis() - startTime;
-        }
-
-        // 导出成功时只记录执行结果，不记录查询明细或Excel内容，避免调用日志表存放大对象。
-        this.apiActuatorService.insertAfterExecute(apiActuatorInfo, req, res.equals(SQL_EXECUTE_SUCCESS), res.equals(SQL_EXECUTE_SUCCESS) ? null : msg, consumeTime);
-        if (res.equals(SQL_EXECUTE_SUCCESS)) {
-            // 对齐通用下载流程：这里返回临时文件名，文件流由/api/common/download统一处理。
-            return ResultModel.success(fileName);
-        } else if (res.equals(SQL_EXECUTE_FAIL)) {
-            return ResultModel.error("操作失败：" + msg);
-        } else {
-            return ResultModel.error("执行时出错，或SQL语句可能存在注入风险，请联系管理员处理！" + msg);
-        }
-    }
-
     @ApiOperation(value = "测试SQL前校验", notes = "测试SQL前校验")
     @MethodLog(desc = "测试SQL前校验")
     @ResponseBody
