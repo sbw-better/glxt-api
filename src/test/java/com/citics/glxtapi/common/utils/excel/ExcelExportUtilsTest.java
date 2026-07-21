@@ -12,6 +12,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -49,6 +50,29 @@ public class ExcelExportUtilsTest {
         assertTrue(excelFile.length() > 0);
 
         Workbook workbook = WorkbookFactory.create(new FileInputStream(excelFile));
+        try {
+            Sheet sheet = workbook.getSheet("result");
+            assertNotNull(sheet);
+            Row header = sheet.getRow(0);
+            assertEquals("id", header.getCell(0).getStringCellValue());
+            assertEquals("name", header.getCell(1).getStringCellValue());
+            assertEquals("amount", header.getCell(2).getStringCellValue());
+            assertEquals(1D, sheet.getRow(1).getCell(0).getNumericCellValue(), 0.0001D);
+            assertEquals("alpha", sheet.getRow(1).getCell(1).getStringCellValue());
+            assertEquals(12.50D, sheet.getRow(2).getCell(2).getNumericCellValue(), 0.0001D);
+        } finally {
+            workbook.close();
+        }
+    }
+
+    @Test
+    public void toExcelBytesWritesDynamicRows() throws Exception {
+        List<Map<String, Object>> rows = Arrays.asList(row("id", 1, "name", "alpha"), row("id", 2, "amount", new BigDecimal("12.50")));
+
+        byte[] bytes = ExcelExportUtils.toExcelBytes(rows);
+
+        assertTrue(bytes.length > 0);
+        Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(bytes));
         try {
             Sheet sheet = workbook.getSheet("result");
             assertNotNull(sheet);

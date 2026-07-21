@@ -1,22 +1,20 @@
 # SQL 执行结果导出接口说明
 
-## 调用流程
-
-1. 前端调用 `/api/actuator/execute`。
-2. 请求体不传 `exportExcel` 或传 `false` 时，接口直接返回原 SQL 查询结果。
-3. 请求体传 `exportExcel=true` 时，接口生成临时 Excel 文件，并返回临时文件名。
-4. 前端拿返回的文件名调用 `/api/common/download` 下载文件。
-
-导出不再使用单独的导出接口。
-
-## 1. 执行 SQL 或生成导出文件
+## 调用入口
 
 - URL: `/api/actuator/execute`
 - Method: `POST`
 - Content-Type: `application/json`
-- Response: 统一 `ResultModel`
 
-### 查询请求示例
+导出不再使用单独接口；成功响应已经是文件流，不需要二次请求下载。
+
+## 调用规则
+
+1. 请求体不传 `exportExcel` 或传 `false` 时，接口返回原 SQL 查询结果 JSON。
+2. 请求体传 `exportExcel=true` 时，接口直接返回 `.xlsx` 文件流。
+3. 查询和导出共用同一套 SQL 校验、权限校验、分页、数据源切换和审计逻辑。
+
+## 查询请求示例
 
 ```json
 {
@@ -34,7 +32,7 @@
 }
 ```
 
-### 导出请求示例
+## 导出请求示例
 
 ```json
 {
@@ -53,19 +51,19 @@
 }
 ```
 
-### 导出成功响应
+## 导出成功响应
 
-```json
-{
-  "code": 0,
-  "message": "操作成功！",
-  "data": "0d4c7b54-7d59-4c17-a4af-76a68b3f2201_demoApi_20260710153000.xlsx"
-}
-```
+成功时直接返回 Excel 文件流，响应头如下：
 
-`data` 是临时文件名，前端需要原样传给通用下载接口。
+| 响应头 | 值 |
+| --- | --- |
+| `Content-Type` | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` |
+| `Content-Disposition` | `attachment;filename=apiCode_yyyyMMddHHmmss.xlsx` |
+| `Access-Control-Expose-Headers` | `Content-Disposition` |
 
-### 失败响应
+## 失败响应
+
+普通查询和导出失败时都返回 JSON。
 
 ```json
 {
@@ -76,31 +74,6 @@
 ```
 
 常见失败原因包括 token 无权限、IP 不在白名单、必填参数缺失、参数类型不合法、SQL 执行失败。
-
-## 2. 下载导出文件
-
-- URL: `/api/common/download`
-- Method: `POST`
-- Content-Type: `application/json`
-- Response: Excel 文件流
-
-### 请求示例
-
-```json
-{
-  "fileName": "0d4c7b54-7d59-4c17-a4af-76a68b3f2201_demoApi_20260710153000.xlsx",
-  "delete": true,
-  "timeStamp": false
-}
-```
-
-字段说明：
-
-| 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| `fileName` | string | 是 | `/api/actuator/execute` 导出成功时返回的 `data` |
-| `delete` | boolean | 否 | 是否下载后删除临时文件，建议传 `true` |
-| `timeStamp` | boolean | 否 | 是否由下载接口再追加时间戳，建议传 `false` |
 
 ## 导出范围
 

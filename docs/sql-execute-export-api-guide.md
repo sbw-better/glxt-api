@@ -1,37 +1,33 @@
-# SQL 执行与导出接口说明
+# SQL 执行与 Excel 导出接口说明
 
 适用项目：glxt-api
 
-文档版本：v2.0
+文档版本：v3.0
 
-更新日期：2026-07-10
+更新日期：2026-07-21
 
 ## 1. 接口概览
 
-| 接口 | 方法 | 说明 | 响应 |
+| 接口 | 方法 | 说明 | 成功响应 |
 | --- | --- | --- | --- |
-| `/api/actuator/execute` | POST | 执行 SQL；可通过 `exportExcel` 控制返回查询数据或生成 Excel 文件 | JSON |
-| `/api/common/download` | POST | 根据文件名下载临时文件 | 文件流 |
+| `/api/actuator/execute` | POST | 执行 SQL；通过 `exportExcel` 控制返回查询数据或 Excel 文件 | JSON 或 `.xlsx` 文件流 |
 
 说明：
 
-- 不再单独提供导出接口。
-- `exportExcel` 不传或为 `false` 时，`/api/actuator/execute` 保持原逻辑，直接返回 SQL 查询数据。
-- `exportExcel=true` 时，`/api/actuator/execute` 生成临时 Excel 文件，并在 `data` 中返回文件名。
-- 文件下载仍通过 `/api/common/download` 完成。
+- 不再单独提供 SQL 结果导出接口。
+- `exportExcel` 不传或为 `false` 时，保持原逻辑，返回 SQL 查询数据 JSON。
+- `exportExcel=true` 时，同一个接口直接返回 Excel 文件流。
+- SQL 结果导出成功时已经是文件流响应，不需要二次请求下载。
 
-## 2. 执行 SQL 或生成导出文件
-
-### 2.1 基本信息
+## 2. 请求信息
 
 | 项 | 值 |
 | --- | --- |
 | URL | `/api/actuator/execute` |
 | Method | POST |
 | Content-Type | `application/json` |
-| 返回类型 | `ResultModel<?>` |
 
-### 2.2 请求参数
+## 3. 请求参数
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
@@ -39,14 +35,16 @@
 | `apiCode` | string | 是 | 接口代码。 |
 | `token` | string | 是 | 接口调用 token，用于权限校验。 |
 | `systemCode` | string | 是 | 调用方系统代码。 |
-| `exportExcel` | boolean | 否 | 是否导出 Excel。`true` 表示生成 Excel 并返回文件名；不传或 `false` 表示返回原查询数据。 |
+| `exportExcel` | boolean | 否 | 是否导出 Excel。`true` 表示直接返回 Excel 文件流；不传或 `false` 表示返回原查询数据。 |
 | `fieldAuth` | boolean | 否 | 字段鉴权开关，一般可不传。 |
 | `pageNeed` | boolean | 否 | 是否分页。`true` 表示分页，`false` 表示不分页，不传时以后端接口配置为准。 |
 | `pageNum` | integer | 分页时必填 | 当前页码，从 1 开始。 |
-| `pageSize` | integer | 分页时必填 | 每页条数，最大不能超过 `common.sql_result_page_max_row`，当前为 5000。 |
+| `pageSize` | integer | 分页时必填 | 每页条数，最大不能超过 `common.sql_result_page_max_row`。 |
 | `params` | object | 按接口配置 | SQL 动态入参。不同接口参数不同。 |
 
-### 2.3 查询请求示例
+## 4. 普通查询
+
+### 请求示例
 
 ```json
 {
@@ -63,7 +61,7 @@
 }
 ```
 
-### 2.4 查询成功响应
+### 成功响应
 
 ```json
 {
@@ -80,7 +78,9 @@
 
 说明：查询响应数据结构由 SQL 是否分页以及查询结果决定，保持原逻辑不变。
 
-### 2.5 导出请求示例
+## 5. Excel 导出
+
+### 请求示例
 
 ```json
 {
@@ -98,25 +98,25 @@
 }
 ```
 
-### 2.6 导出成功响应
+### 成功响应
 
-```json
-{
-  "code": 0,
-  "message": "操作成功！",
-  "data": "0d4c7b54-7d59-4c17-a4af-76a68b3f2201_demoApi_20260710153000.xlsx"
-}
+成功时直接返回 `.xlsx` 文件流。
+
+| 响应头 | 值 |
+| --- | --- |
+| `Content-Type` | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` |
+| `Content-Disposition` | `attachment;filename=apiCode_yyyyMMddHHmmss.xlsx` |
+| `Access-Control-Expose-Headers` | `Content-Disposition` |
+
+文件名示例：
+
+```text
+demoApi_20260721143000.xlsx
 ```
 
-响应字段说明：
+## 6. 失败响应
 
-| 字段 | 类型 | 说明 |
-| --- | --- | --- |
-| `code` | integer | `0` 表示成功。 |
-| `message` | string | 响应消息。 |
-| `data` | string | `exportExcel=true` 时为临时 Excel 文件名，用于调用下载接口。 |
-
-### 2.7 失败响应
+普通查询和 Excel 导出失败时，仍返回 JSON 错误结构。
 
 ```json
 {
@@ -135,60 +135,11 @@
 | `systemCode` 为空 | 系统代码必填。 |
 | 分页参数缺失 | 分页时必须传 `pageNum` 和 `pageSize`。 |
 | 分页参数非法 | `pageNum` 和 `pageSize` 必须大于 0。 |
-| `pageSize` 超限 | 当前最大 5000。 |
+| `pageSize` 超限 | 不能超过系统配置的最大分页条数。 |
 | 参数缺失或类型错误 | `params` 不符合接口参数配置。 |
 | SQL 执行异常 | SQL 执行失败或被安全规则拦截。 |
 
-## 3. 下载导出文件
-
-### 3.1 基本信息
-
-| 项 | 值 |
-| --- | --- |
-| URL | `/api/common/download` |
-| Method | POST |
-| Content-Type | `application/json` |
-| 返回类型 | 文件流 |
-
-### 3.2 请求参数
-
-| 字段 | 类型 | 必填 | 默认值 | 说明 |
-| --- | --- | --- | --- | --- |
-| `fileName` | string | 是 | 无 | `/api/actuator/execute` 在 `exportExcel=true` 时返回的 `data`。 |
-| `delete` | boolean | 否 | true | 下载后是否删除临时文件。 |
-| `timeStamp` | boolean | 否 | true | 下载文件名是否追加当前时间戳。 |
-
-### 3.3 请求示例
-
-```json
-{
-  "fileName": "0d4c7b54-7d59-4c17-a4af-76a68b3f2201_demoApi_20260710153000.xlsx",
-  "delete": true,
-  "timeStamp": false
-}
-```
-
-### 3.4 响应说明
-
-成功时返回文件流，响应头包含：
-
-| 响应头 | 说明 |
-| --- | --- |
-| `Content-Type` | `application/octet-stream` |
-| `Content-Disposition` | 下载文件名 |
-| `Access-Control-Expose-Headers` | 暴露 `Content-Disposition` |
-
-失败时返回：
-
-```json
-{
-  "code": 1002,
-  "message": "下载失败！",
-  "data": null
-}
-```
-
-## 4. 导出规则
+## 7. 导出规则
 
 | 规则 | 说明 |
 | --- | --- |
@@ -199,9 +150,9 @@
 | 动态字段 | 不同 SQL 的字段可以不同，Excel 表头动态生成。 |
 | 空结果 | 生成空 Excel 文件，不报错。 |
 | null 值 | 导出为空单元格。 |
-| 文件名 | `UUID_apiCode_yyyyMMddHHmmss.xlsx`。 |
+| 文件名 | `apiCode_yyyyMMddHHmmss.xlsx`。 |
 
-## 5. 分页规则
+## 8. 分页规则
 
 | 场景 | 规则 |
 | --- | --- |

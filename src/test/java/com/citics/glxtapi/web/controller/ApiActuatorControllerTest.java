@@ -1,6 +1,7 @@
 package com.citics.glxtapi.web.controller;
 
 import com.citics.glxtapi.plugin.db.exception.OpenException;
+import com.citics.glxtapi.web.entity.vo.ApiActuatorExcelResult;
 import com.citics.glxtapi.web.service.ApiActuatorService;
 import org.junit.Before;
 import org.junit.Test;
@@ -21,7 +22,6 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -29,6 +29,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -67,20 +68,39 @@ public class ApiActuatorControllerTest {
     }
 
     @Test
-    public void executeReturnsFileNameWhenExportExcelIsTrue() throws Exception {
-        String fileName = "uuid_demoApi_20260630153000.xlsx";
-        when(apiActuatorService.execute(eq(EXPORT_REQUEST_BODY), any(HttpServletRequest.class))).thenReturn(fileName);
+    public void executeReturnsFileStreamWhenExportExcelIsTrue() throws Exception {
+        byte[] content = new byte[]{1, 2, 3};
+        String fileName = "demoApi_20260630153000.xlsx";
+        when(apiActuatorService.executeExcel(eq(EXPORT_REQUEST_BODY), any(HttpServletRequest.class))).thenReturn(new ApiActuatorExcelResult(fileName, content));
 
         mockMvc.perform(post("/api/actuator/execute")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(EXPORT_REQUEST_BODY))
                 .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .andExpect(header().string("Content-Disposition", "attachment;filename=" + fileName))
+                .andExpect(header().string("Access-Control-Expose-Headers", "Content-Disposition"))
+                .andExpect(content().bytes(content));
+
+        verify(apiActuatorService).executeExcel(eq(EXPORT_REQUEST_BODY), any(HttpServletRequest.class));
+        verify(apiActuatorService).insertAfterExecute(eq(EXPORT_REQUEST_BODY), any(HttpServletRequest.class), eq(true), eq(null), anyLong());
+    }
+
+    @Test
+    public void executeReturnsDataWhenExportExcelIsFalse() throws Exception {
+        String requestBody = "{\"tenant\":\"demo\",\"apiCode\":\"demoApi\",\"token\":\"token\",\"exportExcel\":false,\"params\":{}}";
+        when(apiActuatorService.execute(eq(requestBody), any(HttpServletRequest.class))).thenReturn(Collections.singletonMap("id", 2));
+
+        mockMvc.perform(post("/api/actuator/execute")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.code", is(0)))
-                .andExpect(jsonPath("$.data", is(fileName)));
+                .andExpect(jsonPath("$.data.id", is(2)));
 
-        verify(apiActuatorService).execute(eq(EXPORT_REQUEST_BODY), any(HttpServletRequest.class));
-        verify(apiActuatorService).insertAfterExecute(eq(EXPORT_REQUEST_BODY), any(HttpServletRequest.class), eq(true), eq(null), anyLong());
+        verify(apiActuatorService).execute(eq(requestBody), any(HttpServletRequest.class));
+        verify(apiActuatorService).insertAfterExecute(eq(requestBody), any(HttpServletRequest.class), eq(true), eq(null), anyLong());
     }
 
     @Test
@@ -103,6 +123,29 @@ public class ApiActuatorControllerTest {
 
         ArgumentCaptor<Object> detailCaptor = ArgumentCaptor.forClass(Object.class);
         verify(apiActuatorService).insertAfterExecute(eq(REQUEST_BODY), any(HttpServletRequest.class), eq(false), detailCaptor.capture(), anyLong());
+        assertEquals("no permission", detailCaptor.getValue());
+    }
+
+    @Test
+    public void executeReturnsErrorJsonWhenExcelExportFails() throws Exception {
+        doThrow(new OpenException("no permission")).when(apiActuatorService).executeExcel(eq(EXPORT_REQUEST_BODY), any(HttpServletRequest.class));
+
+        PrintStream originalErr = System.err;
+        try {
+            System.setErr(new PrintStream(new ByteArrayOutputStream()));
+            mockMvc.perform(post("/api/actuator/execute")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(EXPORT_REQUEST_BODY))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.code", is(1002)))
+                    .andExpect(jsonPath("$.message", containsString("no permission")));
+        } finally {
+            System.setErr(originalErr);
+        }
+
+        ArgumentCaptor<Object> detailCaptor = ArgumentCaptor.forClass(Object.class);
+        verify(apiActuatorService).insertAfterExecute(eq(EXPORT_REQUEST_BODY), any(HttpServletRequest.class), eq(false), detailCaptor.capture(), anyLong());
         assertEquals("no permission", detailCaptor.getValue());
     }
 }

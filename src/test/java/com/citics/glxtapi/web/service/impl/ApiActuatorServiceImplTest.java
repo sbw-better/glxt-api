@@ -1,8 +1,8 @@
 package com.citics.glxtapi.web.service.impl;
 
 import com.citics.glxtapi.common.page.PageInfoResult;
-import com.citics.glxtapi.common.utils.file.ToolUtil;
 import com.citics.glxtapi.plugin.sql.DbModule;
+import com.citics.glxtapi.web.entity.vo.ApiActuatorExcelResult;
 import com.citics.glxtapi.web.entity.vo.ApiInterfaceVO;
 import com.citics.glxtapi.web.service.ApiParamService;
 import com.citics.glxtapi.web.service.ApiService;
@@ -17,9 +17,13 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
@@ -108,30 +112,48 @@ public class ApiActuatorServiceImplTest {
     }
 
     @Test
-    public void executeWritesExcelAndReturnsDownloadFileNameWhenExportExcelIsTrue() {
+    public void executeExcelReturnsWorkbookBytesAndFileName() throws Exception {
         when(dbModule.select(anyString(), anyMap(), eq(true), eq(API_FIELD_BACK_MODE_DEFAULT)))
                 .thenReturn(Collections.singletonList(row("id", 1, "name", "demo")));
 
-        Object result = service.execute(EXPORT_BODY, request);
+        ApiActuatorExcelResult result = service.executeExcel(EXPORT_BODY, request);
 
-        String fileName = (String) result;
-        assertTrue(fileName.endsWith(".xlsx"));
-        assertTrue(fileName.contains("_demoApi_"));
-        assertTrue(new File(ToolUtil.getDownloadPath(), fileName).exists());
+        assertTrue(result.getFileName().endsWith(".xlsx"));
+        assertTrue(result.getFileName().startsWith("demoApi_"));
+        assertTrue(result.getContent().length > 0);
+        Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(result.getContent()));
+        try {
+            Sheet sheet = workbook.getSheet("result");
+            assertEquals("id", sheet.getRow(0).getCell(0).getStringCellValue());
+            assertEquals("name", sheet.getRow(0).getCell(1).getStringCellValue());
+            assertEquals(1D, sheet.getRow(1).getCell(0).getNumericCellValue(), 0.0001D);
+            assertEquals("demo", sheet.getRow(1).getCell(1).getStringCellValue());
+        } finally {
+            workbook.close();
+        }
+        assertTrue(!new File(temporaryFolder.getRoot(), "download").exists());
     }
 
     @Test
-    public void executeWritesExcelFromCurrentPageListWhenPageResultReturned() {
+    public void executeExcelWritesCurrentPageListWhenPageResultReturned() throws Exception {
         ApiInterfaceVO pageApi = apiInterface(WHETHER_YES);
         when(apiService.getByApi("demo", "demoApi")).thenReturn(pageApi);
         PageInfoResult pageInfoResult = new PageInfoResult(Arrays.asList(row("code", "A001", "status", null)));
         when(dbModule.page2(anyString(), anyLong(), anyLong(), anyMap(), eq(true), eq(API_FIELD_BACK_MODE_DEFAULT))).thenReturn(pageInfoResult);
 
-        Object result = service.execute(EXPORT_PAGE_BODY, request);
+        ApiActuatorExcelResult result = service.executeExcel(EXPORT_PAGE_BODY, request);
 
-        String fileName = (String) result;
-        assertTrue(fileName.endsWith(".xlsx"));
-        assertTrue(new File(ToolUtil.getDownloadPath(), fileName).exists());
+        Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(result.getContent()));
+        try {
+            Sheet sheet = workbook.getSheet("result");
+            assertEquals("code", sheet.getRow(0).getCell(0).getStringCellValue());
+            assertEquals("status", sheet.getRow(0).getCell(1).getStringCellValue());
+            assertEquals("A001", sheet.getRow(1).getCell(0).getStringCellValue());
+            assertEquals("", sheet.getRow(1).getCell(1).getStringCellValue());
+        } finally {
+            workbook.close();
+        }
+        assertTrue(!new File(temporaryFolder.getRoot(), "download").exists());
     }
 
     @Test
