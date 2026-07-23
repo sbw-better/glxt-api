@@ -54,6 +54,21 @@ public class ApiParam extends Model<ApiParam> {
     @Excel(name = "参数类型")
     private Integer type;
 
+    @TableField("DIRECTION")
+    @ApiModelProperty("存储过程参数方向：1-IN，2-OUT，3-INOUT")
+    @Excel(name = "存储过程参数方向")
+    private Integer direction;
+
+    @TableField("JDBC_TYPE")
+    @ApiModelProperty("存储过程JDBC类型")
+    @Excel(name = "存储过程JDBC类型")
+    private String jdbcType;
+
+    @TableField("ORDER_NO")
+    @ApiModelProperty("存储过程参数顺序")
+    @Excel(name = "存储过程参数顺序")
+    private Integer orderNo;
+
     @TableField("REQUIRED")
     @ApiModelProperty("是否必填")
     @Excel(name = "是否必填")

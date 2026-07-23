@@ -2,6 +2,7 @@ package com.citics.glxtapi.web.controller;
 
 import com.citics.glxtapi.plugin.db.exception.OpenException;
 import com.citics.glxtapi.web.entity.vo.ApiActuatorExcelResult;
+import com.citics.glxtapi.web.entity.vo.ProcedureExecuteResult;
 import com.citics.glxtapi.web.service.ApiActuatorService;
 import org.junit.Before;
 import org.junit.Test;
@@ -101,6 +102,26 @@ public class ApiActuatorControllerTest {
 
         verify(apiActuatorService).execute(eq(requestBody), any(HttpServletRequest.class));
         verify(apiActuatorService).insertAfterExecute(eq(requestBody), any(HttpServletRequest.class), eq(true), eq(null), anyLong());
+    }
+
+    @Test
+    public void executeReturnsProcedureResultAndWritesSuccessLog() throws Exception {
+        ProcedureExecuteResult procedureResult = new ProcedureExecuteResult();
+        procedureResult.getOutParams().put("status", "0");
+        procedureResult.getCursors().put("data", Collections.singletonList(Collections.singletonMap("code", "A001")));
+        when(apiActuatorService.execute(eq(REQUEST_BODY), any(HttpServletRequest.class))).thenReturn(procedureResult);
+
+        mockMvc.perform(post("/api/actuator/execute")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(REQUEST_BODY))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.code", is(0)))
+                .andExpect(jsonPath("$.data.outParams.status", is("0")))
+                .andExpect(jsonPath("$.data.cursors.data[0].code", is("A001")));
+
+        verify(apiActuatorService).execute(eq(REQUEST_BODY), any(HttpServletRequest.class));
+        verify(apiActuatorService).insertAfterExecute(eq(REQUEST_BODY), any(HttpServletRequest.class), eq(true), eq(null), anyLong());
     }
 
     @Test

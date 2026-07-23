@@ -12,7 +12,9 @@ import com.citics.glxtapi.plugin.sql.interceptor.SQLInterceptor;
 import com.citics.glxtapi.plugin.sql.table.NamedTable;
 import com.citics.glxtapi.plugin.sql.table.SQLTable;
 import com.citics.glxtapi.web.context.RequestContext;
+import com.citics.glxtapi.web.entity.ApiParam;
 import com.citics.glxtapi.web.entity.interceptor.ResultProvider;
+import com.citics.glxtapi.web.entity.vo.ProcedureExecuteResult;
 import com.citics.glxtapi.web.exception.APIException;
 import com.citics.glxtapi.web.model.Page;
 import com.citics.glxtapi.web.service.TenantService;
@@ -26,10 +28,14 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 
 import javax.sql.DataSource;
 import java.beans.Transient;
+import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -584,6 +590,150 @@ public class DbModule implements ModuleService {
                 new SingleRowResultSetExtractor<>(Object.class),
                 boundSql.getParameters()
         )));
+    }
+
+    public ProcedureExecuteResult callProcedure(String procedureName, List<ApiParam> paramList,
+                                                Map<String, Object> params, boolean saveSql, Integer fieldBackMode) {
+        List<ApiParam> orderedParams = new ArrayList<>(paramList == null ? Collections.emptyList() : paramList);
+        // CallableStatement按位置绑定参数，不能依赖参数名；ORDER_NO必须与存储过程签名顺序一致。
+        orderedParams.sort(Comparator.comparing(x -> x.getOrderNo() == null ? Integer.MAX_VALUE : x.getOrderNo()));
+        String callSql = buildProcedureCallSql(procedureName, orderedParams.size());
+        if (saveSql) {
+            // 先记录调用文本，保证过程执行失败时调用日志也能看到具体的{ call ... }。
+            SqlContextHolder.clear();
+            SqlContextHolder.setSql(callSql);
+            SqlContextHolder.clearCount();
+            SqlContextHolder.setSqlCount(0);
+        }
+        return this.execute(null, () -> this.jdbcTemplate.execute((ConnectionCallback<ProcedureExecuteResult>) connection -> {
+            ProcedureExecuteResult result = new ProcedureExecuteResult();
+            try (CallableStatement callableStatement = connection.prepareCall(callSql)) {
+                for (int i = 0; i < orderedParams.size(); i++) {
+                    ApiParam param = orderedParams.get(i);
+                    int index = i + 1;
+                    int sqlType = getProcedureSqlType(param.getJdbcType());
+                    // OUT/INOUT必须先注册输出类型，Oracle游标按Types.CURSOR(-10)处理。
+                    if (PROCEDURE_PARAM_DIRECTION_OUT == param.getDirection()
+                            || PROCEDURE_PARAM_DIRECTION_INOUT == param.getDirection()) {
+                        callableStatement.registerOutParameter(index, sqlType);
+                    }
+                    // IN/INOUT再写入调用方传入或默认补齐后的参数值。
+                    if (PROCEDURE_PARAM_DIRECTION_IN == param.getDirection()
+                            || PROCEDURE_PARAM_DIRECTION_INOUT == param.getDirection()) {
+                        Object value = params == null ? null : params.get(param.getCode());
+                        if (value == null) {
+                            // Oracle驱动对setObject(index, null)兼容性不稳定，空值必须按JDBC类型显式绑定。
+                            callableStatement.setNull(index, sqlType);
+                        } else {
+                            callableStatement.setObject(index, value);
+                        }
+                    }
+                }
+                callableStatement.execute();
+                int resultCount = 0;
+                for (int i = 0; i < orderedParams.size(); i++) {
+                    ApiParam param = orderedParams.get(i);
+                    if (PROCEDURE_PARAM_DIRECTION_OUT != param.getDirection()
+                            && PROCEDURE_PARAM_DIRECTION_INOUT != param.getDirection()) {
+                        continue;
+                    }
+                    int index = i + 1;
+                    if (isProcedureCursorType(param.getJdbcType())) {
+                        Object value = callableStatement.getObject(index);
+                        if (value instanceof ResultSet) {
+                            ResultSet resultSet = (ResultSet) value;
+                            try {
+                                // 游标结果按参数code分组返回，便于多游标场景下前端分别渲染表格。
+                                List<Map<String, Object>> rows = resultSetToList(resultSet, fieldBackMode);
+                                result.getCursors().put(param.getCode(), rows);
+                                resultCount += rows.size();
+                            } finally {
+                                resultSet.close();
+                            }
+                        } else {
+                            result.getCursors().put(param.getCode(), Collections.emptyList());
+                        }
+                    } else {
+                        result.getOutParams().put(param.getCode(), callableStatement.getObject(index));
+                    }
+                }
+                result.setResultCount(resultCount);
+                if (saveSql) {
+                    // RESULT_COUNT记录所有游标行数合计；无游标或执行失败时默认记0。
+                    SqlContextHolder.setSqlCount(resultCount);
+                }
+                return result;
+            }
+        }));
+    }
+
+    public static String buildProcedureCallSql(String procedureName, int paramCount) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("{ call ").append(procedureName).append("(");
+        for (int i = 0; i < paramCount; i++) {
+            if (i > 0) {
+                builder.append(", ");
+            }
+            builder.append("?");
+        }
+        builder.append(") }");
+        return builder.toString();
+    }
+
+    private int getProcedureSqlType(String jdbcType) {
+        if (StringUtils.isBlank(jdbcType)) {
+            throw new APIException("存储过程JDBC类型不能为空");
+        }
+        String type = jdbcType.trim().toUpperCase(Locale.ROOT);
+        if (PROCEDURE_JDBC_TYPE_VARCHAR.equals(type)) {
+            return Types.VARCHAR;
+        }
+        if (PROCEDURE_JDBC_TYPE_INTEGER.equals(type)) {
+            return Types.INTEGER;
+        }
+        if (PROCEDURE_JDBC_TYPE_BIGINT.equals(type)) {
+            return Types.BIGINT;
+        }
+        if (PROCEDURE_JDBC_TYPE_DECIMAL.equals(type)) {
+            return Types.DECIMAL;
+        }
+        if (PROCEDURE_JDBC_TYPE_DATE.equals(type)) {
+            return Types.DATE;
+        }
+        if (PROCEDURE_JDBC_TYPE_TIMESTAMP.equals(type)) {
+            return Types.TIMESTAMP;
+        }
+        if (PROCEDURE_JDBC_TYPE_CURSOR.equals(type)) {
+            // java.sql.Types在JDK 8中没有标准CURSOR常量，OracleTypes.CURSOR实际值为-10。
+            return -10;
+        }
+        throw new APIException("不支持的存储过程JDBC类型：" + jdbcType);
+    }
+
+    private boolean isProcedureCursorType(String jdbcType) {
+        return jdbcType != null && PROCEDURE_JDBC_TYPE_CURSOR.equals(jdbcType.trim().toUpperCase(Locale.ROOT));
+    }
+
+    private List<Map<String, Object>> resultSetToList(ResultSet resultSet, Integer fieldBackMode) throws SQLException {
+        List<Map<String, Object>> rows = new ArrayList<>();
+        ResultSetMetaData metaData = resultSet.getMetaData();
+        int columnCount = metaData.getColumnCount();
+        while (resultSet.next()) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            for (int i = 1; i <= columnCount; i++) {
+                String columnName = metaData.getColumnLabel(i);
+                if (StringUtils.isBlank(columnName)) {
+                    columnName = metaData.getColumnName(i);
+                }
+                // 与SQL查询保持一致：默认小写字段名；别名模式保留数据库返回的原始列名。
+                if (fieldBackMode == null || !fieldBackMode.equals(API_FIELD_BACK_MODE_ALIAS_NAME)) {
+                    columnName = columnName == null ? null : columnName.toLowerCase(Locale.ROOT);
+                }
+                row.put(columnName, resultSet.getObject(i));
+            }
+            rows.add(row);
+        }
+        return rows;
     }
 
     /**

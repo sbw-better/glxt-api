@@ -80,6 +80,11 @@ public class ApiInterface extends Model<ApiInterface> {
     @Excel(name = "FROM参数")
     private String fromParam;
 
+    @TableField("PROCEDURE_NAME")
+    @ApiModelProperty("存储过程名称")
+    @Excel(name = "存储过程名称")
+    private String procedureName;
+
     @TableField("WHERE_PARAM_FIXED")
     @ApiModelProperty("固定WHERE参数")
     @Excel(name = "固定WHERE参数")

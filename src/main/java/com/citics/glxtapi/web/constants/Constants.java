@@ -128,6 +128,7 @@ public class Constants {
      * 接口类型 1|API
      */
     public static int INTERFACE_TYPE_API = 1;
+    public static int INTERFACE_TYPE_PROCEDURE = 2;
 
     /**
      * 是否 0|否  1|是
@@ -143,6 +144,24 @@ public class Constants {
     public static int FILED_TYPE_FLOAT = 3;
     public static int FILED_TYPE_DATE = 4;
     public static int FILED_TYPE_LIST = 5;
+
+    /**
+     * 存储过程参数方向 1|IN 2|OUT 3|INOUT
+     */
+    public static int PROCEDURE_PARAM_DIRECTION_IN = 1;
+    public static int PROCEDURE_PARAM_DIRECTION_OUT = 2;
+    public static int PROCEDURE_PARAM_DIRECTION_INOUT = 3;
+
+    /**
+     * 存储过程JDBC类型
+     */
+    public static String PROCEDURE_JDBC_TYPE_VARCHAR = "VARCHAR";
+    public static String PROCEDURE_JDBC_TYPE_INTEGER = "INTEGER";
+    public static String PROCEDURE_JDBC_TYPE_BIGINT = "BIGINT";
+    public static String PROCEDURE_JDBC_TYPE_DECIMAL = "DECIMAL";
+    public static String PROCEDURE_JDBC_TYPE_DATE = "DATE";
+    public static String PROCEDURE_JDBC_TYPE_TIMESTAMP = "TIMESTAMP";
+    public static String PROCEDURE_JDBC_TYPE_CURSOR = "CURSOR";
 
     /**
      * 参数校验类型  1|不验证  2|表达式验证  3|正则验证

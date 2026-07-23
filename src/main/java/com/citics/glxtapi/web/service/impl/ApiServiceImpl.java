@@ -30,8 +30,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -71,38 +74,19 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
         List<ApiParam> apiParamList = new ArrayList<>(dto.getApiParamList());
         String tenant = this.tenantService.getTenant();
         tenant = StringUtils.isEmpty(tenant) ? dto.getTenant() : tenant;
+        if (dto.getType() == null) {
+            dto.setType(INTERFACE_TYPE_API);
+        }
 
         // 数据校验
         isFalse(StringUtils.isEmpty(dto.getName()), "名称不能为空，请核对！");
         isFalse(StringUtils.isEmpty(dto.getCode()), "编码不能为空，请核对！");
-        isFalse(StringUtils.isEmpty(dto.getSelectParam()), "SELECT参数不能为空，请核对！");
-        isFalse(dto.getFieldBackMode() == null, "字段返回模式不能为空，请核对！");
-        isFalse(StringUtils.isEmpty(dto.getFromParam()), "FROM参数不能为空，请核对！");
-        isFalse(dto.getPage() == null, "是否分页未指定，请核对！");
-        isFalse(dto.getConnectionId() == null, "数据源未指定，请核对！");
-        isFalse(!this.connectionService.isHaveConnectionPermission(tenant, dto.getConnectionId()), "数据源未授权，请核对！");
-
-        for (ApiParam apiParam : apiParamList) {
-            String code = apiParam.getCode();
-            isFalse(StringUtils.isEmpty(apiParam.getName()), "入参名称不能为空，请核对！");
-            isFalse(StringUtils.isEmpty(code), "入参编码不能为空，请核对！");
-            isFalse(apiParam.getType() == null, "入参类型不能为空，请核对！");
-            isFalse(apiParam.getRequired() == null, "入参是否必填不能为空，请核对！");
-            isFalse(apiParam.getValidateType() == null, "入参校验类型不能为空，请核对！");
-
-            if (apiParam.getValidateType() != FILED_CHECK_TYPE_NO) {
-                isFalse(StringUtils.isEmpty(apiParam.getExpression()), "入参校验表达式不能为空，请核对！");
-                isFalse(StringUtils.isEmpty(apiParam.getError()), "入参校验错误提示不能为空，请核对！");
-            }
-
-            if (code.equals(API_PARAM_MANAGER_ID) || code.equals(API_PARAM_PRODUCT_ID_LIST) || code.equals(API_PARAM_PRODUCT_CODE_LIST)) {
-                isFalse(apiParam.getRequired().equals(WHETHER_NO), "入参managerField、fundIdsField、fundCodesField，需配置为非必填，请核对！");
-                if (code.equals(API_PARAM_MANAGER_ID)) {
-                    isFalse(!apiParam.getType().equals(FILED_TYPE_INT), "入参managerField的类型应为整型，请核对！");
-                } else {
-                    isFalse(!apiParam.getType().equals(FILED_TYPE_STRING), "入参fundIdsField、fundCodesField的类型应为字符串类型，请核对！");
-                }
-            }
+        isFalse(!dto.getType().equals(INTERFACE_TYPE_API) && !dto.getType().equals(INTERFACE_TYPE_PROCEDURE),
+                "接口类型仅支持SQL查询或存储过程，请核对！");
+        if (dto.getType().equals(INTERFACE_TYPE_PROCEDURE)) {
+            validateProcedureApi(dto, apiParamList, tenant);
+        } else {
+            validateSqlApi(dto, apiParamList, tenant);
         }
 
         ApiInterface apiInterface = new ApiInterface();
@@ -308,6 +292,9 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
 
     @Override
     public String preview(ApiInterfaceDTO dto) {
+        if (INTERFACE_TYPE_PROCEDURE == (dto.getType() == null ? INTERFACE_TYPE_API : dto.getType())) {
+            return previewProcedure(dto);
+        }
         String sql = "";
         // SELECT
         String selectParam = dto.getSelectParam();
@@ -417,6 +404,41 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
         return sql;
     }
 
+    private String previewProcedure(ApiInterfaceDTO dto) {
+        isFalse(StringUtils.isEmpty(dto.getProcedureName()), "存储过程名称为空，暂不可预览，请先配置！");
+        List<ApiParam> apiParamList = dto.getApiParamList() == null ? new ArrayList<>() : new ArrayList<>(dto.getApiParamList());
+        // 预览和实际调用都以ORDER_NO为准，帮助前端直观看到绑定位置是否正确。
+        apiParamList.sort(Comparator.comparing(x -> x.getOrderNo() == null ? Integer.MAX_VALUE : x.getOrderNo()));
+        StringBuilder builder = new StringBuilder();
+        builder.append("{ call ").append(dto.getProcedureName()).append("(");
+        for (int i = 0; i < apiParamList.size(); i++) {
+            if (i > 0) {
+                builder.append(", ");
+            }
+            ApiParam param = apiParamList.get(i);
+            builder.append("?")
+                    .append(" /* ")
+                    .append(param.getCode())
+                    .append(":")
+                    .append(procedureDirectionName(param.getDirection()))
+                    .append(":")
+                    .append(param.getJdbcType())
+                    .append(" */");
+        }
+        builder.append(") }");
+        return builder.toString();
+    }
+
+    private String procedureDirectionName(Integer direction) {
+        if (PROCEDURE_PARAM_DIRECTION_OUT == direction) {
+            return "OUT";
+        }
+        if (PROCEDURE_PARAM_DIRECTION_INOUT == direction) {
+            return "INOUT";
+        }
+        return "IN";
+    }
+
     @Override
     public InterfaceDemoVo demo(ApiInterfaceDTO dto) {
         // 获取接口
@@ -439,6 +461,11 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
         jsonObject.put("apiCode", api.getCode());
         jsonObject.put("fieldAuth", "鉴权开关（一般可不传该字段）");
         jsonObject.put("pageNeed", "分页开关（一般可不传该字段）");
+        // 增加参数exportExcel，判断是否导出excel
+        jsonObject.put("exportExcel","excel导出开关（一般可不传该字段。不传，正常返回查询结果；传false，正常返回查询结果；传true，返回excel文件流信息）");
+        if (INTERFACE_TYPE_PROCEDURE == (api.getType() == null ? INTERFACE_TYPE_API : api.getType())) {
+            jsonObject.put("procedureName", api.getProcedureName());
+        }
         if (WHETHER_YES.equals(api.getPage())) {
             jsonObject.put("pageNum", 1);
             jsonObject.put("pageSize", 2);
@@ -447,6 +474,10 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
         if (apiParamList != null && apiParamList.size() != 0) {
             JSONObject jsonObjectSub = new JSONObject(true);
             for (ApiParam p : apiParamList) {
+                if (INTERFACE_TYPE_PROCEDURE == (api.getType() == null ? INTERFACE_TYPE_API : api.getType())
+                        && PROCEDURE_PARAM_DIRECTION_OUT == p.getDirection()) {
+                    continue;
+                }
                 Integer type = p.getType();
                 String key = WHETHER_YES.equals(p.getRequired()) ? p.getCode() : p.getCode() + "(非必传，不传取默认值，传则删掉括号内容)";
                 if (FILED_TYPE_STRING == type) {
@@ -633,6 +664,89 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
         return this.count(queryWrapper) > 0;
     }
 
+    private void validateSqlApi(ApiInterfaceDTO dto, List<ApiParam> apiParamList, String tenant) {
+        isFalse(StringUtils.isEmpty(dto.getSelectParam()), "SELECT参数不能为空，请核对！");
+        isFalse(dto.getFieldBackMode() == null, "字段返回模式不能为空，请核对！");
+        isFalse(StringUtils.isEmpty(dto.getFromParam()), "FROM参数不能为空，请核对！");
+        isFalse(dto.getPage() == null, "是否分页未指定，请核对！");
+        isFalse(dto.getConnectionId() == null, "数据源未指定，请核对！");
+        isFalse(!this.connectionService.isHaveConnectionPermission(tenant, dto.getConnectionId()), "数据源未授权，请核对！");
+
+        for (ApiParam apiParam : apiParamList) {
+            String code = apiParam.getCode();
+            isFalse(StringUtils.isEmpty(apiParam.getName()), "入参名称不能为空，请核对！");
+            isFalse(StringUtils.isEmpty(code), "入参编码不能为空，请核对！");
+            isFalse(apiParam.getType() == null, "入参类型不能为空，请核对！");
+            isFalse(apiParam.getRequired() == null, "入参是否必填不能为空，请核对！");
+            isFalse(apiParam.getValidateType() == null, "入参校验类型不能为空，请核对！");
+
+            if (apiParam.getValidateType() != FILED_CHECK_TYPE_NO) {
+                isFalse(StringUtils.isEmpty(apiParam.getExpression()), "入参校验表达式不能为空，请核对！");
+                isFalse(StringUtils.isEmpty(apiParam.getError()), "入参校验错误提示不能为空，请核对！");
+            }
+
+            if (code.equals(API_PARAM_MANAGER_ID) || code.equals(API_PARAM_PRODUCT_ID_LIST) || code.equals(API_PARAM_PRODUCT_CODE_LIST)) {
+                isFalse(apiParam.getRequired().equals(WHETHER_NO), "入参managerField、fundIdsField、fundCodesField，需配置为非必填，请核对！");
+                if (code.equals(API_PARAM_MANAGER_ID)) {
+                    isFalse(!apiParam.getType().equals(FILED_TYPE_INT), "入参managerField的类型应为整型，请核对！");
+                } else {
+                    isFalse(!apiParam.getType().equals(FILED_TYPE_STRING), "入参fundIdsField、fundCodesField的类型应为字符串类型，请核对！");
+                }
+            }
+        }
+    }
+
+    private void validateProcedureApi(ApiInterfaceDTO dto, List<ApiParam> apiParamList, String tenant) {
+        isFalse(StringUtils.isEmpty(dto.getProcedureName()), "存储过程名称不能为空，请核对！");
+        // 过程名来自配置端，不允许调用方动态传入；这里限制字符集，避免配置成任意SQL片段。
+        isFalse(!dto.getProcedureName().matches("[A-Za-z0-9_.$#]+"), "存储过程名称仅支持字母、数字、下划线、点、$、#，请核对！");
+        isFalse(dto.getConnectionId() == null, "数据源未指定，请核对！");
+        isFalse(!this.connectionService.isHaveConnectionPermission(tenant, dto.getConnectionId()), "数据源未授权，请核对！");
+
+        Set<Integer> orderNoSet = new HashSet<>();
+        for (ApiParam apiParam : apiParamList) {
+            isFalse(StringUtils.isEmpty(apiParam.getName()), "存储过程参数名称不能为空，请核对！");
+            isFalse(StringUtils.isEmpty(apiParam.getCode()), "存储过程参数编码不能为空，请核对！");
+            isFalse(apiParam.getDirection() == null, "存储过程参数方向不能为空，请核对！");
+            isFalse(apiParam.getJdbcType() == null, "存储过程参数JDBC类型不能为空，请核对！");
+            isFalse(apiParam.getOrderNo() == null, "存储过程参数顺序不能为空，请核对！");
+            isFalse(!apiParam.getDirection().equals(PROCEDURE_PARAM_DIRECTION_IN)
+                            && !apiParam.getDirection().equals(PROCEDURE_PARAM_DIRECTION_OUT)
+                            && !apiParam.getDirection().equals(PROCEDURE_PARAM_DIRECTION_INOUT),
+                    "存储过程参数方向仅支持IN、OUT、INOUT，请核对！");
+            isFalse(!isSupportedProcedureJdbcType(apiParam.getJdbcType()),
+                    "存储过程参数JDBC类型不支持：" + apiParam.getJdbcType());
+            // 游标入参和INOUT游标在不同数据库驱动上差异大，一期只支持OUT游标。
+            isFalse(PROCEDURE_JDBC_TYPE_CURSOR.equals(apiParam.getJdbcType().trim().toUpperCase())
+                            && !apiParam.getDirection().equals(PROCEDURE_PARAM_DIRECTION_OUT),
+                    "存储过程CURSOR参数一期仅支持OUT方向，请核对！");
+            // ORDER_NO决定CallableStatement的?占位符位置，重复会导致绑定错位。
+            isFalse(orderNoSet.contains(apiParam.getOrderNo()), "存储过程参数顺序重复：" + apiParam.getOrderNo());
+            orderNoSet.add(apiParam.getOrderNo());
+
+            if (!apiParam.getDirection().equals(PROCEDURE_PARAM_DIRECTION_OUT)) {
+                // OUT参数由数据库返回，不参与调用方入参必填和表达式/正则校验。
+                isFalse(apiParam.getRequired() == null, "存储过程IN/INOUT参数是否必填不能为空，请核对！");
+                isFalse(apiParam.getValidateType() == null, "存储过程IN/INOUT参数校验类型不能为空，请核对！");
+                if (apiParam.getValidateType() != FILED_CHECK_TYPE_NO) {
+                    isFalse(StringUtils.isEmpty(apiParam.getExpression()), "存储过程IN/INOUT参数校验表达式不能为空，请核对！");
+                    isFalse(StringUtils.isEmpty(apiParam.getError()), "存储过程IN/INOUT参数校验错误提示不能为空，请核对！");
+                }
+            }
+        }
+    }
+
+    private boolean isSupportedProcedureJdbcType(String jdbcType) {
+        String type = jdbcType == null ? "" : jdbcType.trim().toUpperCase();
+        return PROCEDURE_JDBC_TYPE_VARCHAR.equals(type)
+                || PROCEDURE_JDBC_TYPE_INTEGER.equals(type)
+                || PROCEDURE_JDBC_TYPE_BIGINT.equals(type)
+                || PROCEDURE_JDBC_TYPE_DECIMAL.equals(type)
+                || PROCEDURE_JDBC_TYPE_DATE.equals(type)
+                || PROCEDURE_JDBC_TYPE_TIMESTAMP.equals(type)
+                || PROCEDURE_JDBC_TYPE_CURSOR.equals(type);
+    }
+
     /**
      * 编码
      * @param apiInterface
@@ -652,6 +766,7 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
         apiInterface.setSelectParam(dto.getSelectParam());
         apiInterface.setFieldBackMode(dto.getFieldBackMode());
         apiInterface.setFromParam(dto.getFromParam());
+        apiInterface.setProcedureName(dto.getProcedureName());
         apiInterface.setWhereParamFixed(dto.getWhereParamFixed());
         apiInterface.setWhereParamChange(dto.getWhereParamChange());
         apiInterface.setGroupParam(dto.getGroupParam());
@@ -684,6 +799,7 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
         vo.setSelectParam(apiInterface.getSelectParam());
         vo.setFieldBackMode(apiInterface.getFieldBackMode());
         vo.setFromParam(apiInterface.getFromParam());
+        vo.setProcedureName(apiInterface.getProcedureName());
         vo.setWhereParamFixed(apiInterface.getWhereParamFixed());
         vo.setWhereParamChange(apiInterface.getWhereParamChange());
         vo.setGroupParam(apiInterface.getGroupParam());

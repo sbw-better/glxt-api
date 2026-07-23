@@ -18,6 +18,7 @@ import com.citics.glxtapi.web.entity.ApiParam;
 import com.citics.glxtapi.web.entity.dto.ApiActuatorDTO;
 import com.citics.glxtapi.web.entity.vo.ApiActuatorExcelResult;
 import com.citics.glxtapi.web.entity.vo.ApiInterfaceVO;
+import com.citics.glxtapi.web.entity.vo.ProcedureExecuteResult;
 import com.citics.glxtapi.web.exception.APIException;
 import com.citics.glxtapi.web.mapper.ApiActuatorMapper;
 import com.citics.glxtapi.web.service.*;
@@ -69,13 +70,19 @@ public class ApiActuatorServiceImpl extends ServiceImpl<ApiActuatorMapper, ApiAc
         JSONObject apiActuatorInfoJson = JSON.parseObject(apiActuatorInfo);
         String tenant = apiActuatorInfoJson.getString("tenant");
         String apiCode = apiActuatorInfoJson.getString("apiCode");
+        isFalse(StringUtils.isEmpty(apiCode), "接口代码为空，请核对！");
+        ApiInterfaceVO apiInterfaceVO = this.apiService.getByApi(tenant, apiCode);
+        // /execute保持统一入口，通过接口配置类型分流，避免前端为存储过程接入新地址。
+        if (INTERFACE_TYPE_PROCEDURE == (apiInterfaceVO.getType() == null ? INTERFACE_TYPE_API : apiInterfaceVO.getType())) {
+            return executeProcedureInterface(apiInterfaceVO, apiActuatorInfoJson, req);
+        }
+        return executeSqlInterface(apiInterfaceVO, apiActuatorInfoJson, req);
+    }
+
+    private Object executeSqlInterface(ApiInterfaceVO apiInterfaceVO, JSONObject apiActuatorInfoJson, HttpServletRequest req) {
         Boolean fieldAuth = apiActuatorInfoJson.getBoolean("fieldAuth");
         Boolean pageNeed = apiActuatorInfoJson.getBoolean("pageNeed");
         String ip = IpUtil.getClientIp(req);
-
-        // 校验、入参处理
-        isFalse(StringUtils.isEmpty(apiCode), "接口代码为空，请核对！");
-        ApiInterfaceVO apiInterfaceVO = this.apiService.getByApi(tenant, apiCode);
         Map<String, Object> paramsMap = infoCheck(apiInterfaceVO, apiActuatorInfoJson, ip, fieldAuth, pageNeed);
 
         // 拼接SQL
@@ -111,6 +118,27 @@ public class ApiActuatorServiceImpl extends ServiceImpl<ApiActuatorMapper, ApiAc
         return sqlRes;
     }
 
+    private ProcedureExecuteResult executeProcedureInterface(ApiInterfaceVO apiInterfaceVO, JSONObject apiActuatorInfoJson, HttpServletRequest req) {
+        String ip = IpUtil.getClientIp(req);
+        Map<String, Object> paramsMap = procedureInfoCheck(apiInterfaceVO, apiActuatorInfoJson, ip);
+
+        try {
+            // 存储过程复用接口配置的数据源切换规则，但不在外层主动开启事务。
+            if (apiInterfaceVO.getConnectionId().equals(API_DEFAULT_DATA_SOURCE_ID)) {
+                this.tenantService.clearDs();
+            } else {
+                this.tenantService.setDs(connectionService.getById(apiInterfaceVO.getConnectionId()).getCode() + "_" + DdConstants.MASTER);
+            }
+            return dbModule.callProcedure(apiInterfaceVO.getProcedureName(), apiInterfaceVO.getApiParamList(),
+                    paramsMap, true, apiInterfaceVO.getFieldBackMode());
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new APIException("存储过程执行错误：" + e.getMessage());
+        } finally {
+            this.tenantService.clearDs();
+        }
+    }
+
     @Override
     public ApiActuatorExcelResult executeExcel(String apiActuatorInfo, HttpServletRequest req) {
         // 复用execute，确保导出和普通查询的SQL拼接、权限校验、分页规则保持一致。
@@ -118,7 +146,31 @@ public class ApiActuatorServiceImpl extends ServiceImpl<ApiActuatorMapper, ApiAc
         JSONObject apiActuatorInfoJson = JSON.parseObject(apiActuatorInfo);
         String apiCode = apiActuatorInfoJson.getString("apiCode");
         String fileName = (StringUtils.isEmpty(apiCode) ? "export" : apiCode) + "_" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()) + ".xlsx";
-        return new ApiActuatorExcelResult(fileName, ExcelExportUtils.toExcelBytes(sqlRes));
+        return new ApiActuatorExcelResult(fileName, ExcelExportUtils.toExcelBytes(normalizeExcelResult(sqlRes)));
+    }
+
+    private Object normalizeExcelResult(Object result) {
+        if (!(result instanceof ProcedureExecuteResult)) {
+            return result;
+        }
+        ProcedureExecuteResult procedureResult = (ProcedureExecuteResult) result;
+        // Excel工具只接收单个表格结果；多游标需要前端分多表展示，一期不做合并导出。
+        if (procedureResult.getCursors() != null && procedureResult.getCursors().size() > 1) {
+            throw new APIException("存储过程多游标结果暂不支持Excel导出");
+        }
+        if (procedureResult.getCursors() != null && procedureResult.getCursors().size() == 1) {
+            return procedureResult.getCursors().values().iterator().next();
+        }
+        List<Map<String, Object>> rows = new ArrayList<>();
+        if (procedureResult.getOutParams() != null) {
+            for (Map.Entry<String, Object> entry : procedureResult.getOutParams().entrySet()) {
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("name", entry.getKey());
+                row.put("value", entry.getValue());
+                rows.add(row);
+            }
+        }
+        return rows;
     }
 
     @Override
@@ -279,6 +331,178 @@ public class ApiActuatorServiceImpl extends ServiceImpl<ApiActuatorMapper, ApiAc
         isFalse(StringUtils.isNotEmpty(validatedMsg), validatedMsg);
 
         return paramsMap;
+    }
+
+    public Map<String, Object> procedureInfoCheck(ApiInterfaceVO apiInterfaceVO, JSONObject apiActuatorInfoJson, String ip) {
+        Map<String, Object> paramsMap = new HashMap<>();
+        String token = apiActuatorInfoJson.getString("token");
+        String systemCode = apiActuatorInfoJson.getString("systemCode");
+        isFalse(!tenantAuthService.hasExecutePermission(apiInterfaceVO.getId(), token, ip), "请检查接口权限！");
+        isFalse(StringUtils.isEmpty(systemCode), "系统代码不可为空，请核对！");
+
+        List<ApiParam> procedureParams = apiInterfaceVO.getApiParamList() == null ? Collections.emptyList() : apiInterfaceVO.getApiParamList();
+        List<ApiParam> inputParams = procedureInputParams(procedureParams);
+        JSONObject paramsJson = apiActuatorInfoJson.getJSONObject("params");
+        Set<String> inputParamCodes = new HashSet<>();
+        for (ApiParam param : inputParams) {
+            inputParamCodes.add(param.getCode());
+        }
+
+        if (paramsJson != null) {
+            for (Map.Entry<String, Object> entry : paramsJson.entrySet()) {
+                // OUT参数由CallableStatement读取，调用方只能提交IN/INOUT参数。
+                isFalse(!inputParamCodes.contains(entry.getKey()),
+                        "存储过程" + apiInterfaceVO.getCode() + "配置中不存在IN/INOUT参数" + entry.getKey() + "，请检查或核对大小写！");
+                paramsMap.put(entry.getKey(), entry.getValue());
+            }
+        }
+
+        for (ApiParam param : inputParams) {
+            if (!paramsMap.containsKey(param.getCode())) {
+                if (WHETHER_YES.equals(param.getRequired())) {
+                    isFalse(true, "存储过程" + apiInterfaceVO.getCode() + "的必传参数" + param.getCode() + "不能为空，请核对！");
+                }
+                if (param.getDefaultValue() != null) {
+                    paramsMap.put(param.getCode(), param.getDefaultValue());
+                }
+            } else if (WHETHER_YES.equals(param.getRequired())) {
+                isFalse(paramsMap.get(param.getCode()) == null
+                                || (paramsMap.get(param.getCode()) instanceof String
+                                && StringUtils.isEmpty((String) paramsMap.get(param.getCode()))),
+                        "存储过程" + apiInterfaceVO.getCode() + "的必传参数" + param.getCode() + "不能为空，请核对！");
+            }
+        }
+
+        String validatedMsg = procedureParamListValidate(inputParams, paramsMap, apiInterfaceVO);
+        isFalse(StringUtils.isNotEmpty(validatedMsg), validatedMsg);
+        return paramsMap;
+    }
+
+    private List<ApiParam> procedureInputParams(List<ApiParam> procedureParams) {
+        List<ApiParam> inputParams = new ArrayList<>();
+        for (ApiParam param : procedureParams) {
+            if (PROCEDURE_PARAM_DIRECTION_IN == param.getDirection()
+                    || PROCEDURE_PARAM_DIRECTION_INOUT == param.getDirection()) {
+                inputParams.add(param);
+            }
+        }
+        return inputParams;
+    }
+
+    public String procedureParamListValidate(List<ApiParam> paramList, Map<String, Object> paramsMap, ApiInterfaceVO apiInterfaceVO) {
+        for (ApiParam param : paramList) {
+            if (!paramsMap.containsKey(param.getCode())) {
+                continue;
+            }
+            if (paramsMap.get(param.getCode()) == null) {
+                // 非必填参数允许显式传null，后续由CallableStatement按jdbcType执行setNull。
+                continue;
+            }
+            // 先按jdbcType转换成CallableStatement更稳定的Java类型，再执行正则校验。
+            Object convertedValue = convertProcedureParamValue(param, paramsMap.get(param.getCode()));
+            paramsMap.put(param.getCode(), convertedValue);
+            if (param.getValidateType() != null && param.getValidateType() == FILED_CHECK_TYPE_PATTERN) {
+                String expression = param.getExpression();
+                String error = replaceErrorParams(param.getError(), paramsMap, param.getCode(), "正则验证说明");
+                Pattern fieldPattern = Pattern.compile(expression);
+                Matcher fieldMatcher = fieldPattern.matcher(String.valueOf(convertedValue));
+                if (!fieldMatcher.find()) {
+                    return error;
+                }
+            }
+        }
+
+        for (ApiParam param : paramList) {
+            if (!paramsMap.containsKey(param.getCode()) || paramsMap.get(param.getCode()) == null) {
+                continue;
+            }
+            if (param.getValidateType() != null && param.getValidateType() == FILED_CHECK_TYPE_EXPRESSION) {
+                String expression = param.getExpression();
+                String error = replaceErrorParams(param.getError(), paramsMap, param.getCode(), "表达式验证说明");
+                Integer sqlRes = null;
+                try {
+                    // 表达式校验沿用原SQL校验能力，执行前切到过程配置的数据源。
+                    if (apiInterfaceVO.getConnectionId().equals(API_DEFAULT_DATA_SOURCE_ID)) {
+                        this.tenantService.clearDs();
+                    } else {
+                        this.tenantService.setDs(connectionService.getById(apiInterfaceVO.getConnectionId()).getCode() + "_" + DdConstants.MASTER);
+                    }
+                    sqlRes = dbModule.selectInt(expression, paramsMap, false, null);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    this.tenantService.clearDs();
+                }
+                if (null != sqlRes && sqlRes < 1) {
+                    return error;
+                }
+            }
+        }
+        return "";
+    }
+
+    private Object convertProcedureParamValue(ApiParam param, Object value) {
+        String jdbcType = param.getJdbcType() == null ? "" : param.getJdbcType().trim().toUpperCase(Locale.ROOT);
+        if (PROCEDURE_JDBC_TYPE_VARCHAR.equals(jdbcType)) {
+            isFalse(!(value instanceof String), "参数" + param.getCode() + "应为字符串类型，请核对！");
+            return value;
+        }
+        if (PROCEDURE_JDBC_TYPE_INTEGER.equals(jdbcType)) {
+            try {
+                return Integer.valueOf(String.valueOf(value));
+            } catch (Exception e) {
+                throw new IllegalArgumentException("参数" + param.getCode() + "应为整型，请核对！");
+            }
+        }
+        if (PROCEDURE_JDBC_TYPE_BIGINT.equals(jdbcType)) {
+            try {
+                return Long.valueOf(String.valueOf(value));
+            } catch (Exception e) {
+                throw new IllegalArgumentException("参数" + param.getCode() + "应为长整型，请核对！");
+            }
+        }
+        if (PROCEDURE_JDBC_TYPE_DECIMAL.equals(jdbcType)) {
+            try {
+                return new BigDecimal(String.valueOf(value));
+            } catch (Exception e) {
+                throw new IllegalArgumentException("参数" + param.getCode() + "应为数值类型，请核对！");
+            }
+        }
+        if (PROCEDURE_JDBC_TYPE_DATE.equals(jdbcType)) {
+            isFalse(!(value instanceof String), "参数" + param.getCode() + "应为日期型(yyyy-MM-dd或yyyy-MM-dd HH:mm:ss)，请核对！");
+            String valueStr = (String) value;
+            if (Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$").matcher(valueStr).find()) {
+                return java.sql.Date.valueOf(valueStr);
+            }
+            if (Pattern.compile("^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$").matcher(valueStr).find()) {
+                return java.sql.Timestamp.valueOf(valueStr);
+            }
+            throw new IllegalArgumentException("参数" + param.getCode() + "应为日期型(yyyy-MM-dd或yyyy-MM-dd HH:mm:ss)，请核对！");
+        }
+        if (PROCEDURE_JDBC_TYPE_TIMESTAMP.equals(jdbcType)) {
+            isFalse(!(value instanceof String), "参数" + param.getCode() + "应为时间型(yyyy-MM-dd HH:mm:ss)，请核对！");
+            String valueStr = (String) value;
+            if (Pattern.compile("^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$").matcher(valueStr).find()) {
+                return java.sql.Timestamp.valueOf(valueStr);
+            }
+            throw new IllegalArgumentException("参数" + param.getCode() + "应为时间型(yyyy-MM-dd HH:mm:ss)，请核对！");
+        }
+        throw new IllegalArgumentException("不支持的存储过程JDBC类型：" + param.getJdbcType());
+    }
+
+    private String replaceErrorParams(String error, Map<String, Object> paramsMap, String code, String fieldName) {
+        if (StringUtils.isEmpty(error)) {
+            return "";
+        }
+        String regex = "#\\{(.+?)\\}";
+        Pattern errorPattern = Pattern.compile(regex);
+        Matcher errorMatcher = errorPattern.matcher(error);
+        while (errorMatcher.find()) {
+            isFalse(!paramsMap.containsKey(errorMatcher.group(1)),
+                    "参数" + code + "的" + fieldName + "中的" + errorMatcher.group(0) + "不存在，请核对！");
+            error = error.replace(errorMatcher.group(0), String.valueOf(paramsMap.get(errorMatcher.group(1))));
+        }
+        return error;
     }
 
     public String paramListValidate(List<ApiParam> paramList, Map<String, Object> paramsMap, ApiInterfaceVO apiInterfaceVO) {
