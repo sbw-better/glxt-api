@@ -1,0 +1,574 @@
+### glxt-api employees_test 存储过程接口测试脚本
+### 前置条件：
+### 1. 在 Oracle 11g 执行 docs/employees-procedure-test.sql。
+### 2. 执行本文件前替换 baseUrl、tenant、token、connectionId。
+### 3. 每个 save 请求成功后，把响应 data.id 填到对应 apiId 变量。
+
+@baseUrl = http://10.23.114.39:30480
+@tenant = glxt
+@token = 替换为接口所在分组token
+@systemCode = glxt-proc-test
+@connectionId = 替换为Oracle数据源ID
+
+@apiEmpGet = procEmpGet
+@apiSalaryDouble = procSalaryDouble
+@apiEmpQuery = procEmpQuery
+@apiEmpInsert = procEmpInsert
+@apiEmpRaiseSalary = procEmpRaiseSalary
+@apiEmpMultiCursor = procEmpMultiCursor
+
+@apiEmpGetId = 替换为procEmpGet保存返回data.id
+@apiSalaryDoubleId = 替换为procSalaryDouble保存返回data.id
+@apiEmpQueryId = 替换为procEmpQuery保存返回data.id
+@apiEmpInsertId = 替换为procEmpInsert保存返回data.id
+@apiEmpRaiseSalaryId = 替换为procEmpRaiseSalary保存返回data.id
+@apiEmpMultiCursorId = 替换为procEmpMultiCursor保存返回data.id
+
+
+### 1. 保存接口：proc_emp_get，IN + OUT标量
+POST {{baseUrl}}/api/interface/save
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "name": "按员工ID查询员工信息",
+  "code": "{{apiEmpGet}}",
+  "type": 2,
+  "description": "测试IN参数和多个OUT标量参数",
+  "orderNo": 101,
+  "connectionId": {{connectionId}},
+  "fieldBackMode": 1,
+  "page": 0,
+  "procedureName": "proc_emp_get",
+  "apiParamList": [
+    {
+      "name": "员工ID",
+      "code": "empId",
+      "type": 2,
+      "direction": 1,
+      "jdbcType": "DECIMAL",
+      "orderNo": 1,
+      "required": 1,
+      "validateType": 1
+    },
+    {
+      "name": "员工姓名",
+      "code": "empName",
+      "direction": 2,
+      "jdbcType": "VARCHAR",
+      "orderNo": 2
+    },
+    {
+      "name": "薪资",
+      "code": "salary",
+      "direction": 2,
+      "jdbcType": "DECIMAL",
+      "orderNo": 3
+    },
+    {
+      "name": "部门ID",
+      "code": "deptId",
+      "direction": 2,
+      "jdbcType": "DECIMAL",
+      "orderNo": 4
+    },
+    {
+      "name": "状态码",
+      "code": "status",
+      "direction": 2,
+      "jdbcType": "VARCHAR",
+      "orderNo": 5
+    },
+    {
+      "name": "状态说明",
+      "code": "message",
+      "direction": 2,
+      "jdbcType": "VARCHAR",
+      "orderNo": 6
+    }
+  ]
+}
+
+
+### 2. 预览：proc_emp_get
+POST {{baseUrl}}/api/interface/preview
+Content-Type: application/json
+
+{
+  "type": 2,
+  "procedureName": "proc_emp_get",
+  "apiParamList": [
+    {"code": "empId", "direction": 1, "jdbcType": "DECIMAL", "orderNo": 1},
+    {"code": "empName", "direction": 2, "jdbcType": "VARCHAR", "orderNo": 2},
+    {"code": "salary", "direction": 2, "jdbcType": "DECIMAL", "orderNo": 3},
+    {"code": "deptId", "direction": 2, "jdbcType": "DECIMAL", "orderNo": 4},
+    {"code": "status", "direction": 2, "jdbcType": "VARCHAR", "orderNo": 5},
+    {"code": "message", "direction": 2, "jdbcType": "VARCHAR", "orderNo": 6}
+  ]
+}
+
+
+### 3. 执行：proc_emp_get，命中数据
+### 预期：outParams.status=0，empName=张三，salary=5000，deptId=10
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiEmpGet}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {
+    "empId": 1
+  }
+}
+
+
+### 4. 执行：proc_emp_get，无数据
+### 预期：outParams.status=404，message=employee not found
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiEmpGet}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {
+    "empId": 999
+  }
+}
+
+
+### 5. 执行：proc_emp_get，参数缺失
+### 预期：提示必传参数empId不能为空
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiEmpGet}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {}
+}
+
+
+### 6. 保存接口：proc_salary_double，INOUT
+POST {{baseUrl}}/api/interface/save
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "name": "薪资翻倍INOUT测试",
+  "code": "{{apiSalaryDouble}}",
+  "type": 2,
+  "description": "测试INOUT NUMBER参数",
+  "orderNo": 102,
+  "connectionId": {{connectionId}},
+  "fieldBackMode": 1,
+  "page": 0,
+  "procedureName": "proc_salary_double",
+  "apiParamList": [
+    {
+      "name": "薪资",
+      "code": "salary",
+      "type": 3,
+      "direction": 3,
+      "jdbcType": "DECIMAL",
+      "orderNo": 1,
+      "required": 1,
+      "validateType": 1
+    }
+  ]
+}
+
+
+### 7. 执行：proc_salary_double
+### 预期：outParams.salary=10000
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiSalaryDouble}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {
+    "salary": 5000
+  }
+}
+
+
+### 8. 保存接口：proc_emp_query，IN可选条件 + OUT游标 + OUT标量
+POST {{baseUrl}}/api/interface/save
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "name": "员工列表游标查询",
+  "code": "{{apiEmpQuery}}",
+  "type": 2,
+  "description": "测试OUT SYS_REFCURSOR和可选过滤条件",
+  "orderNo": 103,
+  "connectionId": {{connectionId}},
+  "fieldBackMode": 1,
+  "page": 0,
+  "procedureName": "proc_emp_query",
+  "apiParamList": [
+    {
+      "name": "部门ID",
+      "code": "deptId",
+      "type": 3,
+      "direction": 1,
+      "jdbcType": "DECIMAL",
+      "orderNo": 1,
+      "required": 0,
+      "defaultValue": null,
+      "validateType": 1
+    },
+    {
+      "name": "最低薪资",
+      "code": "minSalary",
+      "type": 3,
+      "direction": 1,
+      "jdbcType": "DECIMAL",
+      "orderNo": 2,
+      "required": 0,
+      "defaultValue": null,
+      "validateType": 1
+    },
+    {
+      "name": "状态码",
+      "code": "status",
+      "direction": 2,
+      "jdbcType": "VARCHAR",
+      "orderNo": 3
+    },
+    {
+      "name": "状态说明",
+      "code": "message",
+      "direction": 2,
+      "jdbcType": "VARCHAR",
+      "orderNo": 4
+    },
+    {
+      "name": "员工列表",
+      "code": "data",
+      "direction": 2,
+      "jdbcType": "CURSOR",
+      "orderNo": 5
+    }
+  ]
+}
+
+
+### 9. 执行：proc_emp_query，按部门过滤
+### 预期：cursors.data 返回 dept_id=10 的张三、李四
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiEmpQuery}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {
+    "deptId": 10
+  }
+}
+
+
+### 10. 执行：proc_emp_query，部门 + 最低薪资
+### 预期：cursors.data 返回 dept_id=10 且 salary>=6000 的李四
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiEmpQuery}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {
+    "deptId": 10,
+    "minSalary": 6000
+  }
+}
+
+
+### 11. 执行：proc_emp_query，可选参数显式传null
+### 预期：后端使用setNull绑定，返回所有员工
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiEmpQuery}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {
+    "deptId": null,
+    "minSalary": null
+  }
+}
+
+
+### 12. 执行：proc_emp_query，无数据
+### 预期：status=0，data=[]
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiEmpQuery}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {
+    "deptId": 999
+  }
+}
+
+
+### 13. Excel导出：proc_emp_query，单游标
+### 预期：下载data游标结果。
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "exportExcel": true,
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiEmpQuery}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {
+    "deptId": 10
+  }
+}
+
+
+### 14. 保存接口：proc_emp_insert，DML插入
+POST {{baseUrl}}/api/interface/save
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "name": "新增员工过程",
+  "code": "{{apiEmpInsert}}",
+  "type": 2,
+  "description": "测试存储过程内部DML和异常返回",
+  "orderNo": 104,
+  "connectionId": {{connectionId}},
+  "fieldBackMode": 1,
+  "page": 0,
+  "procedureName": "proc_emp_insert",
+  "apiParamList": [
+    {"name": "员工ID", "code": "empId", "type": 2, "direction": 1, "jdbcType": "DECIMAL", "orderNo": 1, "required": 1, "validateType": 1},
+    {"name": "员工姓名", "code": "empName", "type": 1, "direction": 1, "jdbcType": "VARCHAR", "orderNo": 2, "required": 1, "validateType": 1},
+    {"name": "薪资", "code": "salary", "type": 3, "direction": 1, "jdbcType": "DECIMAL", "orderNo": 3, "required": 1, "validateType": 1},
+    {"name": "部门ID", "code": "deptId", "type": 2, "direction": 1, "jdbcType": "DECIMAL", "orderNo": 4, "required": 1, "validateType": 1},
+    {"name": "状态码", "code": "status", "direction": 2, "jdbcType": "VARCHAR", "orderNo": 5},
+    {"name": "状态说明", "code": "message", "direction": 2, "jdbcType": "VARCHAR", "orderNo": 6}
+  ]
+}
+
+
+### 15. 执行：proc_emp_insert，新增成功
+### 预期：status=0，message=insert success
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiEmpInsert}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {
+    "empId": 100,
+    "empName": "测试员工",
+    "salary": 8800,
+    "deptId": 40
+  }
+}
+
+
+### 16. 执行：proc_emp_insert，主键重复
+### 预期：status=409，message=employee id already exists
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiEmpInsert}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {
+    "empId": 1,
+    "empName": "重复员工",
+    "salary": 6600,
+    "deptId": 10
+  }
+}
+
+
+### 17. Excel导出：proc_emp_insert，无游标
+### 预期：下载outParams键值表。
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "exportExcel": true,
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiEmpInsert}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {
+    "empId": 101,
+    "empName": "导出员工",
+    "salary": 9100,
+    "deptId": 40
+  }
+}
+
+
+### 18. 保存接口：proc_emp_raise_salary，更新过程
+POST {{baseUrl}}/api/interface/save
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "name": "按部门涨薪过程",
+  "code": "{{apiEmpRaiseSalary}}",
+  "type": 2,
+  "description": "测试更新类DML过程和OUT影响行数",
+  "orderNo": 105,
+  "connectionId": {{connectionId}},
+  "fieldBackMode": 1,
+  "page": 0,
+  "procedureName": "proc_emp_raise_salary",
+  "apiParamList": [
+    {"name": "部门ID", "code": "deptId", "type": 2, "direction": 1, "jdbcType": "DECIMAL", "orderNo": 1, "required": 1, "validateType": 1},
+    {"name": "涨薪比例", "code": "raiseRate", "type": 3, "direction": 1, "jdbcType": "DECIMAL", "orderNo": 2, "required": 1, "validateType": 1},
+    {"name": "影响行数", "code": "rows", "direction": 2, "jdbcType": "DECIMAL", "orderNo": 3},
+    {"name": "状态码", "code": "status", "direction": 2, "jdbcType": "VARCHAR", "orderNo": 4},
+    {"name": "状态说明", "code": "message", "direction": 2, "jdbcType": "VARCHAR", "orderNo": 5}
+  ]
+}
+
+
+### 19. 执行：proc_emp_raise_salary
+### 预期：deptId=20 的王五、赵六涨薪10%，rows=2
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiEmpRaiseSalary}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {
+    "deptId": 20,
+    "raiseRate": 0.1
+  }
+}
+
+
+### 20. 保存接口：proc_emp_multi_cursor，双游标
+POST {{baseUrl}}/api/interface/save
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "name": "员工多游标查询",
+  "code": "{{apiEmpMultiCursor}}",
+  "type": 2,
+  "description": "测试多个OUT SYS_REFCURSOR和Excel多游标限制",
+  "orderNo": 106,
+  "connectionId": {{connectionId}},
+  "fieldBackMode": 1,
+  "page": 0,
+  "procedureName": "proc_emp_multi_cursor",
+  "apiParamList": [
+    {"name": "部门汇总游标", "code": "deptData", "direction": 2, "jdbcType": "CURSOR", "orderNo": 1},
+    {"name": "高薪员工游标", "code": "topData", "direction": 2, "jdbcType": "CURSOR", "orderNo": 2}
+  ]
+}
+
+
+### 21. 执行：proc_emp_multi_cursor
+### 预期：cursors.deptData和cursors.topData均有数据，resultCount为两个游标行数合计。
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiEmpMultiCursor}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {}
+}
+
+
+### 22. Excel导出：proc_emp_multi_cursor
+### 预期：失败，提示“存储过程多游标结果暂不支持Excel导出”。
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "exportExcel": true,
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiEmpMultiCursor}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {}
+}
+
+
+### 23. 查询接口配置分页
+POST {{baseUrl}}/api/interface/page
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "type": 2,
+  "pageNum": 1,
+  "pageSize": 20
+}
+
+
+### 24. 查询执行记录
+POST {{baseUrl}}/api/actuator/page
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "pageNum": 1,
+  "pageSize": 20
+}
+
+
+### 25. 导出接口配置
+### /api/interface/export 只接收 ids，不按 tenant/type/code 过滤。
+### 先执行各个保存接口配置请求，把响应 data.id 填到顶部对应 apiId 变量。
+POST {{baseUrl}}/api/interface/export
+Content-Type: application/json
+
+{
+  "ids": [
+    {{apiEmpGetId}},
+    {{apiSalaryDoubleId}},
+    {{apiEmpQueryId}},
+    {{apiEmpInsertId}},
+    {{apiEmpRaiseSalaryId}},
+    {{apiEmpMultiCursorId}}
+  ]
+}
+
+
+### 26. 清理接口配置：按需执行
+### 注意：删除前先替换对应apiId变量。
+POST {{baseUrl}}/api/interface/delete
+Content-Type: application/json
+
+{
+  "id": {{apiEmpGetId}}
+}

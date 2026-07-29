@@ -1,0 +1,297 @@
+### glxt-api 存储过程 double_value 接口测试脚本
+### 使用方式：
+### 1. 先在 Oracle 执行 docs/double-value-procedure-test.sql。
+### 2. 替换 baseUrl、tenant、token、connectionId。
+### 3. 先执行“保存接口配置”，从响应中记录 data.id，替换下面的 apiId。
+
+@baseUrl = http://10.23.114.39:30480
+@tenant = glxt
+@token = 替换为接口所在分组token
+@systemCode = glxt-test
+@connectionId = 替换为Oracle数据源ID
+@apiCode = doubleValueProc
+@apiId = 替换为保存接口返回的data.id
+
+
+### 0. Oracle 过程定义参考
+### CREATE OR REPLACE PROCEDURE double_value (
+###   p_num IN OUT NUMBER
+### )
+### AS
+### BEGIN
+###   p_num := p_num * 2;
+### END;
+### /
+
+
+### 1. 保存存储过程接口配置
+POST {{baseUrl}}/api/interface/save
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "name": "double_value数值翻倍过程",
+  "code": "{{apiCode}}",
+  "type": 2,
+  "description": "Oracle 11g INOUT NUMBER 参数测试：p_num = p_num * 2",
+  "orderNo": 1,
+  "connectionId": {{connectionId}},
+  "fieldBackMode": 1,
+  "page": 0,
+  "procedureName": "double_value",
+  "apiParamList": [
+    {
+      "name": "输入输出数值",
+      "code": "pNum",
+      "type": 3,
+      "direction": 3,
+      "jdbcType": "DECIMAL",
+      "orderNo": 1,
+      "required": 1,
+      "defaultValue": null,
+      "validateType": 1,
+      "description": "对应Oracle参数p_num，INOUT NUMBER"
+    }
+  ]
+}
+
+
+### 2. 存储过程调用预览
+POST {{baseUrl}}/api/interface/preview
+Content-Type: application/json
+
+{
+  "type": 2,
+  "procedureName": "double_value",
+  "apiParamList": [
+    {
+      "name": "输入输出数值",
+      "code": "pNum",
+      "direction": 3,
+      "jdbcType": "DECIMAL",
+      "orderNo": 1
+    }
+  ]
+}
+
+
+### 3. 根据接口ID查询配置
+POST {{baseUrl}}/api/interface/get
+Content-Type: application/json
+
+{
+  "id": {{apiId}}
+}
+
+
+### 4. 根据接口代码查询配置
+POST {{baseUrl}}/api/interface/get
+Content-Type: application/json
+
+{
+  "code": "{{apiCode}}"
+}
+
+
+### 5. 列表查询存储过程接口
+POST {{baseUrl}}/api/interface/list
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "type": 2,
+  "code": "{{apiCode}}"
+}
+
+
+### 6. 分页查询存储过程接口
+POST {{baseUrl}}/api/interface/page
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "type": 2,
+  "code": "{{apiCode}}",
+  "pageNum": 1,
+  "pageSize": 10
+}
+
+
+### 7. 获取调用demo
+POST {{baseUrl}}/api/interface/demo
+Content-Type: application/json
+
+{
+  "code": "{{apiCode}}"
+}
+
+
+### 8. 查询接口是否分页
+### 预期：存储过程 page=0，返回 false。
+POST {{baseUrl}}/api/interface/have_page
+Content-Type: application/json
+
+{
+  "code": "{{apiCode}}"
+}
+
+
+### 9. 执行存储过程：pNum=5，预期返回 pNum=10
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiCode}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {
+    "pNum": 5
+  }
+}
+
+
+### 10. 执行存储过程：pNum=12.5，预期返回 pNum=25
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiCode}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {
+    "pNum": 12.5
+  }
+}
+
+
+### 11. 必填参数缺失测试
+### 预期：返回错误，提示必传参数pNum不能为空。
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiCode}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {}
+}
+
+
+### 12. 必填参数null测试
+### 预期：返回错误，提示必传参数pNum不能为空。
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiCode}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {
+    "pNum": null
+  }
+}
+
+
+### 13. 参数类型错误测试
+### 预期：返回错误，提示pNum应为数值类型。
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiCode}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {
+    "pNum": "abc"
+  }
+}
+
+
+### 14. 未知参数测试
+### 预期：返回错误，提示配置中不存在IN/INOUT参数unknown。
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiCode}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {
+    "pNum": 5,
+    "unknown": 1
+  }
+}
+
+
+### 15. 错误token测试
+### 预期：权限校验失败，不执行存储过程。
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiCode}}",
+  "token": "wrong-token",
+  "systemCode": "{{systemCode}}",
+  "params": {
+    "pNum": 5
+  }
+}
+
+
+### 16. Excel导出测试
+### double_value没有游标，预期导出outParams键值表：name=pNum, value=10。
+POST {{baseUrl}}/api/actuator/execute
+Content-Type: application/json
+
+{
+  "exportExcel": true,
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiCode}}",
+  "token": "{{token}}",
+  "systemCode": "{{systemCode}}",
+  "params": {
+    "pNum": 5
+  }
+}
+
+
+### 17. 查询执行记录
+POST {{baseUrl}}/api/actuator/page
+Content-Type: application/json
+
+{
+  "tenant": "{{tenant}}",
+  "apiCode": "{{apiCode}}",
+  "pageNum": 1,
+  "pageSize": 10
+}
+
+
+### 18. 导出接口配置
+### /api/interface/export 只接收 ids，不按 tenant/type/code 过滤。
+### 先执行保存接口配置，把响应 data.id 填到顶部 @apiId。
+POST {{baseUrl}}/api/interface/export
+Content-Type: application/json
+
+{
+  "ids": [
+    {{apiId}}
+  ]
+}
+
+
+### 19. 清理接口配置，可选
+### 注意：执行后会删除接口配置。
+POST {{baseUrl}}/api/interface/delete
+Content-Type: application/json
+
+{
+  "id": {{apiId}}
+}

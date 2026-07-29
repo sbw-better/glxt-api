@@ -1,0 +1,885 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>存储过程接口新增页面原型</title>
+  <style>
+    :root {
+      --bg: #f2f4f7;
+      --panel: #ffffff;
+      --line: #d9dee8;
+      --line-soft: #edf0f5;
+      --text: #1f2937;
+      --muted: #697386;
+      --label: #344054;
+      --primary: #1890ff;
+      --primary-dark: #0f73d7;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --success: #18a058;
+      --code: #f6f8fb;
+      --thead: #f3f6fb;
+      --note: #fff7e6;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-width: 1280px;
+      color: var(--text);
+      background:
+        linear-gradient(rgba(15, 23, 42, .46), rgba(15, 23, 42, .46)),
+        var(--bg);
+      font: 12px/1.5 "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    }
+
+    .page {
+      width: 1440px;
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 34px 42px;
+    }
+
+    .modal {
+      position: relative;
+      width: 1288px;
+      margin: 0 auto;
+      background: var(--panel);
+      border: 1px solid #cfd6e2;
+      box-shadow: 0 14px 36px rgba(15, 23, 42, .22);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 48px;
+      padding: 0 22px;
+      border-bottom: 1px solid var(--line-soft);
+      background: #fbfcfe;
+    }
+
+    .modal-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .close {
+      color: #98a2b3;
+      font-size: 20px;
+    }
+
+    .modal-body {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 16px;
+      padding: 18px 22px 24px;
+    }
+
+    .main {
+      min-width: 0;
+    }
+
+    .tabs {
+      display: flex;
+      align-items: center;
+      margin: -2px 0 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .tab {
+      position: relative;
+      min-width: 132px;
+      padding: 9px 18px 10px;
+      color: #667085;
+      text-align: center;
+      border: 1px solid transparent;
+      border-bottom: 0;
+      background: #f7f9fc;
+      font-weight: 600;
+    }
+
+    .tab + .tab {
+      margin-left: 4px;
+    }
+
+    .tab.active {
+      color: var(--primary);
+      border-color: var(--line);
+      background: #fff;
+    }
+
+    .tab.active::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -1px;
+      height: 2px;
+      background: #fff;
+    }
+
+    .tab-note {
+      margin-left: 12px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .section {
+      margin-bottom: 18px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 12px;
+      color: #111827;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .section-title::before {
+      content: "";
+      width: 3px;
+      height: 14px;
+      border-radius: 2px;
+      background: var(--primary);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 28px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 94px minmax(0, 1fr);
+      align-items: start;
+      gap: 10px;
+    }
+
+    .form-row.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      padding-top: 7px;
+      color: var(--label);
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .required::before {
+      content: "*";
+      margin-right: 3px;
+      color: var(--danger);
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      min-height: 30px;
+      padding: 5px 10px;
+      color: #1f2937;
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      outline: none;
+      background: #fff;
+      font: inherit;
+    }
+
+    textarea {
+      min-height: 58px;
+      resize: vertical;
+    }
+
+    input[readonly],
+    .readonly {
+      background: #f8fafc;
+      color: #475467;
+    }
+
+    .hint {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .inline-hint {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .call-preview {
+      display: grid;
+      grid-template-columns: 94px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    .code-box {
+      min-height: 32px;
+      padding: 7px 10px;
+      overflow: hidden;
+      color: #0f172a;
+      border: 1px solid #d9e2ef;
+      border-radius: 3px;
+      background: var(--code);
+      font-family: Consolas, "Courier New", monospace;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .preview-note {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 11px;
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+      white-space: normal;
+    }
+
+    .button-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 10px 0;
+    }
+
+    button {
+      min-width: 66px;
+      height: 30px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      background: #fff;
+      color: #344054;
+      cursor: default;
+      font: inherit;
+    }
+
+    .primary {
+      color: #fff;
+      border-color: var(--primary);
+      background: var(--primary);
+    }
+
+    .primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .ghost {
+      color: var(--primary);
+      border-color: #b9dcff;
+      background: #f2f8ff;
+    }
+
+    .danger {
+      color: var(--danger);
+      border-color: #fecaca;
+      background: #fff5f5;
+    }
+
+    .param-table-wrap {
+      border: 1px solid var(--line);
+      overflow-x: auto;
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      min-width: 1230px;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    th,
+    td {
+      height: 38px;
+      padding: 6px 8px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line-soft);
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    th {
+      color: #344054;
+      background: var(--thead);
+      font-weight: 600;
+    }
+
+    td {
+      color: #1f2937;
+      background: #fff;
+    }
+
+    td input,
+    td select {
+      height: 28px;
+      min-height: 28px;
+      padding: 3px 6px;
+      text-align: left;
+    }
+
+    .w-order { width: 64px; }
+    .w-name { width: 112px; }
+    .w-code { width: 118px; }
+    .w-dir { width: 92px; }
+    .w-param-type { width: 106px; }
+    .w-type { width: 112px; }
+    .w-required { width: 86px; }
+    .w-default { width: 108px; }
+    .w-check { width: 108px; }
+    .w-expression { width: 148px; }
+    .w-desc { width: 148px; }
+    .w-op { width: 108px; }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 48px;
+      height: 22px;
+      padding: 0 7px;
+      border-radius: 11px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .tag.in { color: #075985; background: #e0f2fe; }
+    .tag.out { color: #166534; background: #dcfce7; }
+    .tag.inout { color: #92400e; background: #fef3c7; }
+    .tag.cursor { color: #6d28d9; background: #ede9fe; }
+
+    .disabled-cell {
+      color: #98a2b3;
+      background: #f8fafc;
+    }
+
+    .mini-actions {
+      display: flex;
+      justify-content: center;
+      gap: 7px;
+      color: var(--primary);
+      white-space: nowrap;
+    }
+
+    .result-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    pre {
+      margin: 0;
+      min-height: 154px;
+      padding: 12px;
+      overflow: auto;
+      border: 1px solid #d9e2ef;
+      border-radius: 3px;
+      background: var(--code);
+      color: #1f2937;
+      font: 12px/1.55 Consolas, "Courier New", monospace;
+    }
+
+    .aside {
+      border-left: 1px solid var(--line-soft);
+      padding-left: 16px;
+    }
+
+    .aside-card {
+      margin-bottom: 12px;
+      padding: 12px;
+      border: 1px solid #e4e9f2;
+      border-radius: 4px;
+      background: #fff;
+    }
+
+    .aside-card.important {
+      border-color: #f6d591;
+      background: var(--note);
+    }
+
+    .aside-title {
+      margin-bottom: 8px;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .rule-list {
+      margin: 0;
+      padding-left: 16px;
+      color: #475467;
+    }
+
+    .rule-list li {
+      margin: 4px 0;
+    }
+
+    .field-map {
+      width: 100%;
+      min-width: 0;
+      table-layout: auto;
+      font-size: 11px;
+    }
+
+    .field-map th,
+    .field-map td {
+      height: 28px;
+      padding: 4px 6px;
+      text-align: left;
+      border-color: #edf0f5;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 0 0;
+      margin-top: 16px;
+      border-top: 1px solid var(--line-soft);
+      background: #fff;
+    }
+
+    .compare-strip {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 8px 0 4px;
+    }
+
+    .compare-box {
+      border: 1px solid #e4e9f2;
+      border-radius: 4px;
+      background: #fbfcfe;
+      padding: 10px;
+    }
+
+    .compare-box strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .hidden-fields {
+      color: #667085;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">新增 - 存储过程接口</div>
+        <div class="close">×</div>
+      </div>
+
+      <div class="modal-body">
+        <main class="main">
+          <div class="tabs">
+            <div class="tab">SQL 查询配置</div>
+            <div class="tab active">存储过程配置</div>
+            <div class="tab-note">切换 Tab 时同步设置接口类型：SQL=1，存储过程=2。</div>
+          </div>
+
+          <section class="section">
+            <h2 class="section-title">基础信息</h2>
+            <div class="form-grid">
+              <div class="form-row">
+                <label class="required">接口名称</label>
+                <div>
+                  <input value="员工薪资查询过程" />
+                  <div class="hint">与现有 SQL 接口一致，用于列表展示。</div>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <label class="required">接口类型</label>
+                <div>
+                  <input class="readonly" readonly value="存储过程接口（type=2）" />
+                  <div class="hint">由当前 Tab 固定，不建议提供手动下拉修改。</div>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <label class="required">接口代码</label>
+                <div>
+                  <input value="emp_salary_proc" />
+                  <div class="hint">接口唯一标识，执行时通过 apiCode 调用。</div>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <label>排序号</label>
+                <input value="103" />
+              </div>
+
+              <div class="form-row full">
+                <label>接口描述</label>
+                <input value="Oracle 存储过程示例：按部门查询员工信息，返回状态、消息和游标数据。" />
+              </div>
+
+              <div class="form-row">
+                <label class="required">数据源ID</label>
+                <select>
+                  <option>ORACLE_11G_GLXT</option>
+                  <option>请选择</option>
+                </select>
+              </div>
+
+              <div class="form-row">
+                <label>字段返回模式</label>
+                <select>
+                  <option>默认模式：字段名原样返回</option>
+                  <option>别名模式：按配置别名返回</option>
+                </select>
+              </div>
+
+              <div class="form-row">
+                <label class="required">存储过程名称</label>
+                <div>
+                  <input value="PKG_EMPLOYEE_QUERY.QUERY_EMPLOYEE_LIST" />
+                  <div class="hint">支持 PROC、PKG.PROC、SCHEMA.PKG.PROC。</div>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <label>是否分页</label>
+                <input class="readonly" readonly value="否（存储过程不走 SQL 分页拼接）" />
+              </div>
+            </div>
+
+            <div class="call-preview">
+              <label>调用预览</label>
+              <div>
+                <div class="code-box">{ call PKG_EMPLOYEE_QUERY.QUERY_EMPLOYEE_LIST(?, ?, ?, ?, ?) }</div>
+                <div class="preview-note">只读自动预览：存储过程名称和参数顺序、方向、JDBC类型配置完整后显示；新增未配置完整时显示“请先完善过程参数”。</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section">
+            <h2 class="section-title">过程参数</h2>
+            <div class="button-row">
+              <button class="primary">新增参数</button>
+              <span class="inline-hint">参数顺序直接维护 orderNo；保存前按 orderNo 升序校验并展示。</span>
+            </div>
+
+            <div class="param-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="w-order">顺序</th>
+                    <th class="w-name">参数名称</th>
+                    <th class="w-code">参数代码</th>
+                    <th class="w-dir">参数方向</th>
+                    <th class="w-param-type">参数类型</th>
+                    <th class="w-type">JDBC类型</th>
+                    <th class="w-required">是否必填</th>
+                    <th class="w-default">默认值</th>
+                    <th class="w-check">校验类型</th>
+                    <th class="w-expression">校验表达式</th>
+                    <th class="w-desc">校验说明</th>
+                    <th class="w-op">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><input value="1" /></td>
+                    <td><input value="部门ID" /></td>
+                    <td><input value="deptId" /></td>
+                    <td>
+                      <select>
+                        <option>IN</option>
+                        <option>OUT</option>
+                        <option>INOUT</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select>
+                        <option>浮点数</option>
+                        <option>字符串</option>
+                        <option>整数</option>
+                        <option>日期</option>
+                        <option>列表</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select>
+                        <option>DECIMAL</option>
+                        <option>VARCHAR</option>
+                        <option>INTEGER</option>
+                        <option>BIGINT</option>
+                        <option>DATE</option>
+                        <option>TIMESTAMP</option>
+                      </select>
+                    </td>
+                    <td><select><option>是</option></select></td>
+                    <td><input value="10" /></td>
+                    <td><select><option>不校验</option></select></td>
+                    <td><input placeholder="可为空" /></td>
+                    <td><input value="部门ID必须为数字" /></td>
+                    <td><div class="mini-actions"><span>编辑</span><span>删除</span></div></td>
+                  </tr>
+                  <tr>
+                    <td><input value="2" /></td>
+                    <td><input value="最低薪资" /></td>
+                    <td><input value="minSalary" /></td>
+                    <td>
+                      <select>
+                        <option>INOUT</option>
+                        <option>IN</option>
+                        <option>OUT</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select>
+                        <option>浮点数</option>
+                        <option>字符串</option>
+                        <option>整数</option>
+                        <option>日期</option>
+                        <option>列表</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select>
+                        <option>DECIMAL</option>
+                        <option>VARCHAR</option>
+                        <option>INTEGER</option>
+                        <option>BIGINT</option>
+                        <option>DATE</option>
+                        <option>TIMESTAMP</option>
+                      </select>
+                    </td>
+                    <td><select><option>否</option></select></td>
+                    <td><input value="5000" /></td>
+                    <td><select><option>不校验</option></select></td>
+                    <td><input placeholder="可为空" /></td>
+                    <td><input value="入参传入，执行后返回" /></td>
+                    <td><div class="mini-actions"><span>编辑</span><span>删除</span></div></td>
+                  </tr>
+                  <tr>
+                    <td><input value="3" /></td>
+                    <td><input value="返回状态" /></td>
+                    <td><input value="status" /></td>
+                    <td>
+                      <select>
+                        <option>OUT</option>
+                        <option>IN</option>
+                        <option>INOUT</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select>
+                        <option>字符串</option>
+                        <option>整数</option>
+                        <option>浮点数</option>
+                        <option>日期</option>
+                        <option>列表</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select>
+                        <option>VARCHAR</option>
+                        <option>INTEGER</option>
+                        <option>BIGINT</option>
+                        <option>DECIMAL</option>
+                        <option>DATE</option>
+                        <option>TIMESTAMP</option>
+                      </select>
+                    </td>
+                    <td class="disabled-cell">不适用</td>
+                    <td class="disabled-cell">不适用</td>
+                    <td class="disabled-cell">不适用</td>
+                    <td class="disabled-cell">不适用</td>
+                    <td class="disabled-cell">由过程返回</td>
+                    <td><div class="mini-actions"><span>编辑</span><span>删除</span></div></td>
+                  </tr>
+                  <tr>
+                    <td><input value="4" /></td>
+                    <td><input value="返回消息" /></td>
+                    <td><input value="message" /></td>
+                    <td>
+                      <select>
+                        <option>OUT</option>
+                        <option>IN</option>
+                        <option>INOUT</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select>
+                        <option>字符串</option>
+                        <option>整数</option>
+                        <option>浮点数</option>
+                        <option>日期</option>
+                        <option>列表</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select>
+                        <option>VARCHAR</option>
+                        <option>INTEGER</option>
+                        <option>BIGINT</option>
+                        <option>DECIMAL</option>
+                        <option>DATE</option>
+                        <option>TIMESTAMP</option>
+                      </select>
+                    </td>
+                    <td class="disabled-cell">不适用</td>
+                    <td class="disabled-cell">不适用</td>
+                    <td class="disabled-cell">不适用</td>
+                    <td class="disabled-cell">不适用</td>
+                    <td class="disabled-cell">由过程返回</td>
+                    <td><div class="mini-actions"><span>编辑</span><span>删除</span></div></td>
+                  </tr>
+                  <tr>
+                    <td><input value="5" /></td>
+                    <td><input value="员工列表" /></td>
+                    <td><input value="data" /></td>
+                    <td>
+                      <select disabled>
+                        <option>OUT</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select disabled>
+                        <option>列表</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select>
+                        <option>CURSOR</option>
+                        <option>VARCHAR</option>
+                        <option>INTEGER</option>
+                        <option>BIGINT</option>
+                        <option>DECIMAL</option>
+                        <option>DATE</option>
+                        <option>TIMESTAMP</option>
+                      </select>
+                    </td>
+                    <td class="disabled-cell">不适用</td>
+                    <td class="disabled-cell">不适用</td>
+                    <td class="disabled-cell">不适用</td>
+                    <td class="disabled-cell">不适用</td>
+                    <td class="disabled-cell">SYS_REFCURSOR</td>
+                    <td><div class="mini-actions"><span>编辑</span><span>删除</span></div></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <div class="footer">
+            <button class="primary">确定</button>
+            <button>取消</button>
+          </div>
+        </main>
+
+        <aside class="aside">
+          <div class="aside-card important">
+            <div class="aside-title">前端重点改造</div>
+            <ul class="rule-list">
+              <li>接口类型新增：1=SQL查询，2=存储过程。</li>
+              <li>接口类型由 Tab 固定：SQL Tab 传 1，存储过程 Tab 传 2。</li>
+              <li>type=2 时隐藏 SQL 拼接字段。</li>
+              <li>新增 procedureName，保存时必填。</li>
+              <li>参数表保留 type；新增 direction、jdbcType、orderNo。</li>
+              <li>CURSOR 只能配置为 OUT。</li>
+              <li>参数排序直接编辑 orderNo。</li>
+              <li>调用预览不提供手动按钮，按完整参数配置自动显示。</li>
+            </ul>
+          </div>
+
+          <div class="aside-card">
+            <div class="aside-title">参数方向规则</div>
+            <table class="field-map">
+              <tr><th>方向</th><th>提交值</th><th>调用方</th></tr>
+              <tr><td>IN</td><td>1</td><td>必须/可选传入</td></tr>
+              <tr><td>OUT</td><td>2</td><td>不传，由过程返回</td></tr>
+              <tr><td>INOUT</td><td>3</td><td>传入且返回</td></tr>
+            </table>
+          </div>
+
+          <div class="aside-card">
+            <div class="aside-title">参数类型</div>
+            <ul class="rule-list">
+              <li>IN/INOUT 参数用于调用方入参校验，建议必填。</li>
+              <li>OUT 标量参数用于说明返回值业务类型，建议显示并配置。</li>
+              <li>OUT CURSOR 参数固定为列表，表示返回结果集。</li>
+              <li>字段值沿用原接口参数 type：字符串、整数、浮点数、日期、列表。</li>
+              <li>JDBC 类型用于数据库绑定，不能替代参数类型的业务校验含义。</li>
+            </ul>
+          </div>
+
+          <div class="aside-card">
+            <div class="aside-title">JDBC 类型</div>
+            <ul class="rule-list">
+              <li>VARCHAR：VARCHAR2、CHAR。</li>
+              <li>INTEGER/BIGINT/DECIMAL：Oracle NUMBER。</li>
+              <li>DATE：yyyy-MM-dd 或 yyyy-MM-dd HH:mm:ss。</li>
+              <li>TIMESTAMP：yyyy-MM-dd HH:mm:ss。</li>
+              <li>CURSOR：Oracle SYS_REFCURSOR。</li>
+              <li>选择 CURSOR 时 direction 必须为 OUT。</li>
+              <li>direction 为 IN/INOUT 时，JDBC 类型下拉不展示 CURSOR。</li>
+            </ul>
+          </div>
+
+          <div class="aside-card important">
+            <div class="aside-title">orderNo 的作用</div>
+            <ul class="rule-list">
+              <li>Oracle CallableStatement 按位置绑定。</li>
+              <li>orderNo=1 对应第一个问号。</li>
+              <li>顺序配置错会导致参数绑定错位。</li>
+              <li>同一接口内不允许重复。</li>
+              <li>建议保存时校验为正整数，并按升序回显。</li>
+            </ul>
+          </div>
+
+          <div class="aside-card">
+            <div class="aside-title">参数表交互说明</div>
+            <ul class="rule-list">
+              <li>新增参数只追加一行，默认 orderNo 可取当前最大值+1。</li>
+              <li>删除操作只保留行内删除。</li>
+              <li>方向为 OUT 时，必填、默认值、校验字段禁用。</li>
+              <li>方向为 IN/INOUT 时，入参校验字段可编辑。</li>
+              <li>选择 CURSOR 时，方向自动设为 OUT 并禁用修改。</li>
+              <li>如果已选 CURSOR 后改方向，需先清空或切换 JDBC 类型。</li>
+            </ul>
+          </div>
+
+          <div class="aside-card">
+            <div class="aside-title">调用预览说明</div>
+            <ul class="rule-list">
+              <li>新增页不放“生成预览”按钮。</li>
+              <li>procedureName 为空时显示待配置。</li>
+              <li>任一参数缺少 orderNo、direction、jdbcType 时显示待配置。</li>
+              <li>配置完整后按参数数量显示 `{ call ...(?, ?) }`。</li>
+              <li>该预览只表示绑定结构，不校验数据库过程是否存在。</li>
+            </ul>
+          </div>
+
+          <div class="aside-card">
+            <div class="aside-title">保存接口字段映射</div>
+            <table class="field-map">
+              <tr><th>页面字段</th><th>后端字段</th></tr>
+              <tr><td>接口类型</td><td>type</td></tr>
+              <tr><td>存储过程名称</td><td>procedureName</td></tr>
+              <tr><td>参数方向</td><td>apiParamList[].direction</td></tr>
+              <tr><td>参数类型</td><td>apiParamList[].type</td></tr>
+              <tr><td>JDBC类型</td><td>apiParamList[].jdbcType</td></tr>
+              <tr><td>参数顺序</td><td>apiParamList[].orderNo</td></tr>
+            </table>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

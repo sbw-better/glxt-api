@@ -607,23 +607,33 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
                 QueryWrapper<ApiInterface> wrapperApi = new QueryWrapper<>();
                 UpdateWrapper<ApiInterface> updateWrapper = new UpdateWrapper<>();
 
+                List<ApiParam> importParamList = apiParamList == null ? new ArrayList<>() : apiParamList;
                 for (ApiInterface api : apiInterfaceList) {
+                    Long importApiId = api.getId();
                     wrapperApi.clear();
                     wrapperApi.lambda().eq(ApiInterface::getCode, api.getCode());
                     isFalse(this.count(wrapperApi) > 0, "文件中的接口" + api.getCode() + "已存在，导入失败，请检查！");
 
-                    List<ApiParam> apiSubParams = apiParamList.stream()
-                            .filter(x -> x.getApiId().equals(api.getId()))
+                    List<ApiParam> apiSubParams = importParamList.stream()
+                            .filter(x -> x.getApiId() != null && x.getApiId().equals(importApiId))
                             .collect(Collectors.toList());
 
                     // 插入接口和参数
                     // 接口ID置空
                     api.setId(null);
                     // 先改成默认数据源
-                    api.setConnectionId(null);
+                    api.setConnectionId(0L);
                     ApiInterfaceDTO dto = new ApiInterfaceDTO();
                     BeanUtils.copyProperties(api, dto);
-                    dto.setApiParamList(new ArrayList<>());
+                    dto.setImportMode(true);
+                    boolean procedureImport = INTERFACE_TYPE_PROCEDURE == (dto.getType() == null ? INTERFACE_TYPE_API : dto.getType());
+                    if (procedureImport) {
+                        // 存储过程参数包含direction、jdbcType、orderNo，导入时随主表一起走save校验，避免配置缺失。
+                        dto.setApiParamList(resetImportedParams(apiSubParams));
+                    } else {
+                        // SQL导入沿用既有流程：主表先保存，参数后插入，减少对原导入行为的影响。
+                        dto.setApiParamList(new ArrayList<>());
+                    }
                     Long apiId = this.save(dto).getId();
 
                     // 插入成功后再将数据源ID置空
@@ -633,7 +643,7 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
                             .eq(ApiInterface::getId, apiId);
                     this.update(updateWrapper);
 
-                    if (apiSubParams != null && apiSubParams.size() != 0) {
+                    if (!procedureImport && apiSubParams != null && apiSubParams.size() != 0) {
                         QueryWrapper<ApiParam> wrapperParam = new QueryWrapper<>();
                         for (ApiParam param : apiSubParams) {
                             param.setApiId(apiId);
@@ -657,6 +667,20 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
         return true;
     }
 
+    private List<ApiParam> resetImportedParams(List<ApiParam> apiSubParams) {
+        List<ApiParam> resetParamList = new ArrayList<>();
+        if (apiSubParams == null) {
+            return resetParamList;
+        }
+        for (ApiParam param : apiSubParams) {
+            // Excel中的参数ID、接口ID仅用于文件内主子表关联；入库前清空，由新接口ID重新绑定。
+            param.setId(null);
+            param.setApiId(null);
+            resetParamList.add(param);
+        }
+        return resetParamList;
+    }
+
     private Boolean isHaveApi(String tenant, String code) {
         QueryWrapper<ApiInterface> queryWrapper = new QueryWrapper<>();
         queryWrapper.lambda().eq(ApiInterface::getTenant, tenant);
@@ -670,7 +694,9 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
         isFalse(StringUtils.isEmpty(dto.getFromParam()), "FROM参数不能为空，请核对！");
         isFalse(dto.getPage() == null, "是否分页未指定，请核对！");
         isFalse(dto.getConnectionId() == null, "数据源未指定，请核对！");
-        isFalse(!this.connectionService.isHaveConnectionPermission(tenant, dto.getConnectionId()), "数据源未授权，请核对！");
+        if (!isImportDefaultConnection(dto)) {
+            isFalse(!this.connectionService.isHaveConnectionPermission(tenant, dto.getConnectionId()), "数据源未授权，请核对！");
+        }
 
         for (ApiParam apiParam : apiParamList) {
             String code = apiParam.getCode();
@@ -701,7 +727,9 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
         // 过程名来自配置端，不允许调用方动态传入；这里限制字符集，避免配置成任意SQL片段。
         isFalse(!dto.getProcedureName().matches("[A-Za-z0-9_.$#]+"), "存储过程名称仅支持字母、数字、下划线、点、$、#，请核对！");
         isFalse(dto.getConnectionId() == null, "数据源未指定，请核对！");
-        isFalse(!this.connectionService.isHaveConnectionPermission(tenant, dto.getConnectionId()), "数据源未授权，请核对！");
+        if (!isImportDefaultConnection(dto)) {
+            isFalse(!this.connectionService.isHaveConnectionPermission(tenant, dto.getConnectionId()), "数据源未授权，请核对！");
+        }
 
         Set<Integer> orderNoSet = new HashSet<>();
         for (ApiParam apiParam : apiParamList) {
@@ -745,6 +773,10 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
                 || PROCEDURE_JDBC_TYPE_DATE.equals(type)
                 || PROCEDURE_JDBC_TYPE_TIMESTAMP.equals(type)
                 || PROCEDURE_JDBC_TYPE_CURSOR.equals(type);
+    }
+
+    private boolean isImportDefaultConnection(ApiInterfaceDTO dto) {
+        return Boolean.TRUE.equals(dto.getImportMode()) && Long.valueOf(0L).equals(dto.getConnectionId());
     }
 
     /**
