@@ -41,15 +41,18 @@
 
 ### 2.3 存储过程 JDBC 类型 `jdbcType`
 
-| 值 | 说明 | 备注 |
+| 前端下拉值 | 入库和执行值 | 说明 |
 | --- | --- | --- |
-| `VARCHAR` | 字符串 | 入参执行时传字符串 |
-| `INTEGER` | 整型 | 入参执行时可传数字或数字字符串 |
-| `BIGINT` | 长整型 | 入参执行时可传数字或数字字符串 |
-| `DECIMAL` | 数值 | 入参执行时可传数字或数字字符串 |
-| `DATE` | 日期 | 入参格式：`yyyy-MM-dd` 或 `yyyy-MM-dd HH:mm:ss` |
-| `TIMESTAMP` | 时间戳 | 入参格式：`yyyy-MM-dd HH:mm:ss` |
-| `CURSOR` | 游标结果集 | 一期仅支持 `OUT` 方向 |
+| `1` | `VARCHAR` | 字符串 |
+| `2` | `INTEGER` | 整型 |
+| `3` | `BIGINT` | 长整型 |
+| `4` | `DECIMAL` | 数值 |
+| `5` | `DATE` | 日期 |
+| `6` | `TIMESTAMP` | 时间戳 |
+| `7` | `CLOB` | 长文本字符串，支持 IN/OUT/INOUT，业务类型 `type=1` |
+| `8` | `CURSOR` | 游标结果集，一期仅支持 `OUT` 方向 |
+
+配置页下拉组件使用左列数字作为 value。保存接口可直接接收这个数字；后端仅在 `type=2` 的存储过程配置保存时转换为中间列字符串。配置查询、Excel 导入导出和执行阶段均使用中间列字符串。编辑已有配置时，前端按该表反向映射为下拉数字。
 
 ## 3. 配置保存接口
 
@@ -91,7 +94,7 @@
 | `name` | string | 是 | 参数名称，用于页面展示 |
 | `code` | string | 是 | 参数编码，执行入参和返回结果使用该 key |
 | `direction` | number | 是 | `1=IN`、`2=OUT`、`3=INOUT` |
-| `jdbcType` | string | 是 | 见 JDBC 类型枚举 |
+| `jdbcType` | string / number | 是 | 前端下拉提交 `1` 至 `8` 时，保存接口会转换为 JDBC 字符串；查询、导出和执行配置仍返回字符串 |
 | `orderNo` | number | 是 | 参数在存储过程签名中的位置，从 `1` 开始 |
 | `required` | number | IN/INOUT 必填 | `1=必填`、`0=非必填`；OUT 参数可不传 |
 | `defaultValue` | string | 否 | IN/INOUT 非必填参数默认值 |
@@ -385,8 +388,8 @@
 
 - 展示 `procedureName`。
 - 隐藏或禁用 SQL 查询专用字段：`selectParam`、`fromParam`、`whereParamFixed`、`whereParamChange`、`groupParam`、`orderParam`、`page`。
-- 参数表格展示：`name`、`code`、`direction`、`jdbcType`、`orderNo`、`required`、`defaultValue`、`validateType`、`expression`、`error`、`description`。
-- OUT 参数不要求填写 `required`、`defaultValue`、`validateType`、`expression`、`error`。
+- 参数表格展示：`name`、`code`、`direction`、`type`、`jdbcType`、`orderNo`、`description`。
+- 存储过程参数不设置或展示 `required`、`defaultValue`、`validateType`、`expression`、`error`。
 - `jdbcType=CURSOR` 时，`direction` 固定为 OUT。
 - 参数列表建议按 `orderNo` 升序展示。
 

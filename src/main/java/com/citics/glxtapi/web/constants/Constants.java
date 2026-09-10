@@ -161,7 +161,21 @@ public class Constants {
     public static String PROCEDURE_JDBC_TYPE_DECIMAL = "DECIMAL";
     public static String PROCEDURE_JDBC_TYPE_DATE = "DATE";
     public static String PROCEDURE_JDBC_TYPE_TIMESTAMP = "TIMESTAMP";
+    public static String PROCEDURE_JDBC_TYPE_CLOB = "CLOB";
     public static String PROCEDURE_JDBC_TYPE_CURSOR = "CURSOR";
+
+    /**
+     * 存储过程 JDBC 类型的前端下拉值。配置保存时会转换为上面的字符串类型，
+     * 因此数据库、Excel 和执行层均不依赖这些数字。
+     */
+    public static int PROCEDURE_JDBC_TYPE_VALUE_VARCHAR = 1;
+    public static int PROCEDURE_JDBC_TYPE_VALUE_INTEGER = 2;
+    public static int PROCEDURE_JDBC_TYPE_VALUE_BIGINT = 3;
+    public static int PROCEDURE_JDBC_TYPE_VALUE_DECIMAL = 4;
+    public static int PROCEDURE_JDBC_TYPE_VALUE_DATE = 5;
+    public static int PROCEDURE_JDBC_TYPE_VALUE_TIMESTAMP = 6;
+    public static int PROCEDURE_JDBC_TYPE_VALUE_CLOB = 7;
+    public static int PROCEDURE_JDBC_TYPE_VALUE_CURSOR = 8;
 
     /**
      * 参数校验类型  1|不验证  2|表达式验证  3|正则验证

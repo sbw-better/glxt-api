@@ -357,22 +357,6 @@ public class ApiActuatorServiceImpl extends ServiceImpl<ApiActuatorMapper, ApiAc
             }
         }
 
-        for (ApiParam param : inputParams) {
-            if (!paramsMap.containsKey(param.getCode())) {
-                if (WHETHER_YES.equals(param.getRequired())) {
-                    isFalse(true, "存储过程" + apiInterfaceVO.getCode() + "的必传参数" + param.getCode() + "不能为空，请核对！");
-                }
-                if (param.getDefaultValue() != null) {
-                    paramsMap.put(param.getCode(), param.getDefaultValue());
-                }
-            } else if (WHETHER_YES.equals(param.getRequired())) {
-                isFalse(paramsMap.get(param.getCode()) == null
-                                || (paramsMap.get(param.getCode()) instanceof String
-                                && StringUtils.isEmpty((String) paramsMap.get(param.getCode()))),
-                        "存储过程" + apiInterfaceVO.getCode() + "的必传参数" + param.getCode() + "不能为空，请核对！");
-            }
-        }
-
         String validatedMsg = procedureParamListValidate(inputParams, paramsMap, apiInterfaceVO);
         isFalse(StringUtils.isNotEmpty(validatedMsg), validatedMsg);
         return paramsMap;
@@ -391,59 +375,19 @@ public class ApiActuatorServiceImpl extends ServiceImpl<ApiActuatorMapper, ApiAc
 
     public String procedureParamListValidate(List<ApiParam> paramList, Map<String, Object> paramsMap, ApiInterfaceVO apiInterfaceVO) {
         for (ApiParam param : paramList) {
-            if (!paramsMap.containsKey(param.getCode())) {
-                continue;
-            }
-            if (paramsMap.get(param.getCode()) == null) {
-                // 非必填参数允许显式传null，后续由CallableStatement按jdbcType执行setNull。
-                continue;
-            }
-            // 先按jdbcType转换成CallableStatement更稳定的Java类型，再执行正则校验。
-            Object convertedValue = convertProcedureParamValue(param, paramsMap.get(param.getCode()));
-            paramsMap.put(param.getCode(), convertedValue);
-            if (param.getValidateType() != null && param.getValidateType() == FILED_CHECK_TYPE_PATTERN) {
-                String expression = param.getExpression();
-                String error = replaceErrorParams(param.getError(), paramsMap, param.getCode(), "正则验证说明");
-                Pattern fieldPattern = Pattern.compile(expression);
-                Matcher fieldMatcher = fieldPattern.matcher(String.valueOf(convertedValue));
-                if (!fieldMatcher.find()) {
-                    return error;
-                }
-            }
-        }
-
-        for (ApiParam param : paramList) {
             if (!paramsMap.containsKey(param.getCode()) || paramsMap.get(param.getCode()) == null) {
+                // 未传或显式null由CallableStatement按jdbcType绑定SQL NULL。
                 continue;
             }
-            if (param.getValidateType() != null && param.getValidateType() == FILED_CHECK_TYPE_EXPRESSION) {
-                String expression = param.getExpression();
-                String error = replaceErrorParams(param.getError(), paramsMap, param.getCode(), "表达式验证说明");
-                Integer sqlRes = null;
-                try {
-                    // 表达式校验沿用原SQL校验能力，执行前切到过程配置的数据源。
-                    if (apiInterfaceVO.getConnectionId().equals(API_DEFAULT_DATA_SOURCE_ID)) {
-                        this.tenantService.clearDs();
-                    } else {
-                        this.tenantService.setDs(connectionService.getById(apiInterfaceVO.getConnectionId()).getCode() + "_" + DdConstants.MASTER);
-                    }
-                    sqlRes = dbModule.selectInt(expression, paramsMap, false, null);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                } finally {
-                    this.tenantService.clearDs();
-                }
-                if (null != sqlRes && sqlRes < 1) {
-                    return error;
-                }
-            }
+            // 存储过程仅做JDBC类型转换，不使用SQL接口的必填、默认值和业务校验配置。
+            paramsMap.put(param.getCode(), convertProcedureParamValue(param, paramsMap.get(param.getCode())));
         }
         return "";
     }
 
     private Object convertProcedureParamValue(ApiParam param, Object value) {
         String jdbcType = param.getJdbcType() == null ? "" : param.getJdbcType().trim().toUpperCase(Locale.ROOT);
-        if (PROCEDURE_JDBC_TYPE_VARCHAR.equals(jdbcType)) {
+        if (PROCEDURE_JDBC_TYPE_VARCHAR.equals(jdbcType) || PROCEDURE_JDBC_TYPE_CLOB.equals(jdbcType)) {
             isFalse(!(value instanceof String), "参数" + param.getCode() + "应为字符串类型，请核对！");
             return value;
         }

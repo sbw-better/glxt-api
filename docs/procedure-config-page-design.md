@@ -50,7 +50,7 @@
 │ 过程参数                                                   │
 │ [新增参数]                                                   │
 │ ┌ 参数表格                                                ┐ │
-│ │ 顺序 参数名称 参数代码 方向 参数类型 JDBC类型 必填 校验...│ │
+│ │ 顺序 参数名称 参数代码 方向 参数类型 JDBC类型 操作│ │
 │ └────────────────────────────────────────────────────────┘ │
 ├────────────────────────────────────────────────────────────┤
 │                                            [确定] [取消]    │
@@ -132,11 +132,6 @@
 | 参数方向 | `direction` | 下拉框 | 是 | `1=IN`，`2=OUT`，`3=INOUT` |
 | 参数类型 | `type` | 下拉框 | 建议必填 | IN/INOUT 表示入参业务类型；OUT 标量表示返回值业务类型；OUT CURSOR 固定为列表 |
 | JDBC类型 | `jdbcType` | 下拉框 | 是 | 见下方类型枚举 |
-| 是否必填 | `required` | 下拉框 | IN/INOUT必填 | OUT 参数不展示或禁用 |
-| 默认值 | `defaultValue` | 输入框 | 否 | 仅 IN/INOUT 有意义 |
-| 校验类型 | `validateType` | 下拉框 | IN/INOUT必填 | OUT 参数不展示或禁用 |
-| 校验表达式 | `expression` | 输入框 | 条件必填 | 正则/表达式校验时必填 |
-| 校验说明 | `error` | 输入框 | 条件必填 | 校验失败提示 |
 | 操作 | - | 编辑/删除按钮 | - | 行操作 |
 
 ### 6.2 参数类型枚举
@@ -159,9 +154,9 @@
 
 交互规则：
 
-- 选择 `OUT` 后，`required/defaultValue/validateType/expression/error` 禁用或隐藏。
+- 所有方向均不展示、不配置、不提交 `required/defaultValue/validateType/expression/error`。
 - 选择 `OUT` 后，参数类型仍展示；标量 OUT 用于说明返回值类型，CURSOR 固定为列表。
-- 选择 `IN` 或 `INOUT` 后，展示入参校验相关字段。
+- IN/INOUT 仅保留 JDBC 类型转换；未传或显式 null 按 SQL NULL 绑定，不自动使用过程声明的默认值。
 - 请求体 `params` 中只允许出现 `IN/INOUT` 参数。
 - `OUT` 参数由后端从 `CallableStatement` 读取并返回。
 
@@ -175,6 +170,7 @@
 | DECIMAL | `DECIMAL` | `NUMBER(p,s)` |
 | DATE | `DATE` | `DATE` |
 | TIMESTAMP | `TIMESTAMP` | `TIMESTAMP` |
+| `CLOB` | 长文本字符串 | 支持 IN/OUT/INOUT，业务类型 `type=1`；输入和输出均为 JSON 字符串 |
 | CURSOR | `CURSOR` | `SYS_REFCURSOR` |
 
 交互规则：
@@ -290,10 +286,7 @@ POST /api/interface/preview
       "code": "fundCode",
       "direction": 1,
       "jdbcType": "VARCHAR",
-      "orderNo": 1,
-      "required": 1,
-      "defaultValue": null,
-      "validateType": 0
+      "orderNo": 1
     },
     {
       "name": "执行状态",
@@ -391,9 +384,9 @@ POST /api/interface/preview
 - 每个参数建议填写 `name/code/type/direction/jdbcType/orderNo`。
 - `orderNo` 不允许重复。
 - `CURSOR` 只能为 `OUT`。
-- `IN/INOUT` 参数必须配置 `required/validateType`，并用 `type` 表示入参业务类型。
+- `IN/INOUT` 使用 `type` 表示业务类型，不配置必填、默认值和业务校验。
 - `OUT` 标量参数用 `type` 表示返回值业务类型；`OUT CURSOR` 的 `type` 固定为列表。
-- `OUT` 参数不要求 `required/defaultValue/validateType/expression/error`。
+- 后端存储过程分支忽略旧配置中的上述五个字段；SQL 接口行为不变。
 - 请求 demo 和执行请求中不能出现 `OUT` 参数。
 
 ## 13. 推荐交互细节

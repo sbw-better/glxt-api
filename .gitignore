@@ -31,3 +31,27 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Local artifacts ###
+.render_tmp/
+*.log
+*.tmp
+*.swp
+*.swo
+
+### Microsoft Office temporary files ###
+~$*.doc
+~$*.docx
+~$*.xls
+~$*.xlsx
+~$*.ppt
+~$*.pptx
+
+### Operating system files ###
+.DS_Store
+Thumbs.db
+
+### Local environment files ###
+.env
+.env.*
+!.env.example

@@ -9,6 +9,7 @@ import com.citics.glxtapi.web.entity.ApiParam;
 import com.citics.glxtapi.web.entity.vo.ApiActuatorExcelResult;
 import com.citics.glxtapi.web.entity.vo.ApiInterfaceVO;
 import com.citics.glxtapi.web.entity.vo.ProcedureExecuteResult;
+import com.citics.glxtapi.web.exception.APIException;
 import com.citics.glxtapi.web.service.ApiParamService;
 import com.citics.glxtapi.web.service.ApiService;
 import com.citics.glxtapi.web.service.ConnectionService;
@@ -227,6 +228,43 @@ public class ApiActuatorServiceImplTest {
     }
 
     @Test
+    public void executeExcelExportsOutParamsWhenProcedureHasNoCursor() throws Exception {
+        ApiInterfaceVO procedureApi = procedureApi();
+        ProcedureExecuteResult procedureResult = new ProcedureExecuteResult();
+        procedureResult.getOutParams().put("status", "0");
+        procedureResult.getOutParams().put("message", "success");
+        when(apiService.getByApi("demo", "demoApi")).thenReturn(procedureApi);
+        when(dbModule.callProcedure(eq("PKG.PROC"), anyList(), anyMap(), eq(true), eq(API_FIELD_BACK_MODE_DEFAULT)))
+                .thenReturn(procedureResult);
+
+        ApiActuatorExcelResult result = service.executeExcel(PROCEDURE_BODY, request);
+
+        Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(result.getContent()));
+        try {
+            Sheet sheet = workbook.getSheet("result");
+            assertEquals("name", sheet.getRow(0).getCell(0).getStringCellValue());
+            assertEquals("value", sheet.getRow(0).getCell(1).getStringCellValue());
+            assertEquals("status", sheet.getRow(1).getCell(0).getStringCellValue());
+            assertEquals("0", sheet.getRow(1).getCell(1).getStringCellValue());
+        } finally {
+            workbook.close();
+        }
+    }
+
+    @Test(expected = APIException.class)
+    public void executeExcelRejectsMultipleProcedureCursors() {
+        ApiInterfaceVO procedureApi = procedureApi();
+        ProcedureExecuteResult procedureResult = new ProcedureExecuteResult();
+        procedureResult.getCursors().put("first", Collections.singletonList(row("id", 1)));
+        procedureResult.getCursors().put("second", Collections.singletonList(row("id", 2)));
+        when(apiService.getByApi("demo", "demoApi")).thenReturn(procedureApi);
+        when(dbModule.callProcedure(eq("PKG.PROC"), anyList(), anyMap(), eq(true), eq(API_FIELD_BACK_MODE_DEFAULT)))
+                .thenReturn(procedureResult);
+
+        service.executeExcel(PROCEDURE_BODY, request);
+    }
+
+    @Test
     public void procedureInfoCheckAllowsOptionalNullInputForOracleSetNullBinding() {
         ApiInterfaceVO procedureApi = procedureApi();
         ApiParam inputParam = procedureApi.getApiParamList().get(0);
@@ -239,12 +277,38 @@ public class ApiActuatorServiceImplTest {
         assertNull(params.get("fundCode"));
     }
 
-    @Test(expected = MybatisPlusException.class)
-    public void procedureInfoCheckRejectsRequiredNullInput() {
+    @Test
+    public void procedureInfoCheckIgnoresLegacyRequiredForNullInput() {
         ApiInterfaceVO procedureApi = procedureApi();
         JSONObject body = JSON.parseObject("{\"token\":\"token\",\"systemCode\":\"front-system\",\"params\":{\"fundCode\":null}}");
 
-        service.procedureInfoCheck(procedureApi, body, "10.0.0.1");
+        assertNull(service.procedureInfoCheck(procedureApi, body, "10.0.0.1").get("fundCode"));
+    }
+
+    @Test
+    public void procedureInfoCheckIgnoresLegacyDefaultAndValidation() {
+        ApiInterfaceVO procedureApi = procedureApi();
+        ApiParam input = procedureApi.getApiParamList().get(0);
+        input.setDefaultValue("legacy-default");
+        input.setValidateType(2);
+        input.setExpression("[");
+        JSONObject body = new JSONObject();
+        body.put("token", "token");
+        body.put("systemCode", "front-system");
+        body.put("params", new JSONObject());
+        org.junit.Assert.assertFalse(service.procedureInfoCheck(procedureApi, body, "10.0.0.1").containsKey("fundCode"));
+        body.getJSONObject("params").put("fundCode", "A001");
+        assertEquals("A001", service.procedureInfoCheck(procedureApi, body, "10.0.0.1").get("fundCode"));
+    }
+
+    @Test
+    public void procedureClobAcceptsStringInput() {
+        ApiInterfaceVO api = procedureApi();
+        api.getApiParamList().get(0).setJdbcType("CLOB");
+        Map<String, Object> params = new java.util.HashMap<>();
+        params.put("fundCode", "中文长文本");
+        assertEquals("", service.procedureParamListValidate(api.getApiParamList().subList(0, 1), params, api));
+        assertEquals("中文长文本", params.get("fundCode"));
     }
 
     private ApiInterfaceVO apiInterface(Integer page) {

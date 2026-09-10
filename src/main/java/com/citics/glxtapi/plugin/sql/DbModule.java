@@ -28,6 +28,10 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 
 import javax.sql.DataSource;
 import java.beans.Transient;
+import java.io.Reader;
+import java.io.StringReader;
+import java.io.IOException;
+import java.sql.Clob;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -624,6 +628,9 @@ public class DbModule implements ModuleService {
                         if (value == null) {
                             // Oracle驱动对setObject(index, null)兼容性不稳定，空值必须按JDBC类型显式绑定。
                             callableStatement.setNull(index, sqlType);
+                        } else if (sqlType == Types.CLOB) {
+                            String text = (String) value;
+                            callableStatement.setClob(index, new StringReader(text), (long) text.length());
                         } else {
                             callableStatement.setObject(index, value);
                         }
@@ -654,7 +661,10 @@ public class DbModule implements ModuleService {
                             result.getCursors().put(param.getCode(), Collections.emptyList());
                         }
                     } else {
-                        result.getOutParams().put(param.getCode(), callableStatement.getObject(index));
+                        result.getOutParams().put(param.getCode(),
+                                getProcedureSqlType(param.getJdbcType()) == Types.CLOB
+                                        ? readProcedureClob(callableStatement.getClob(index))
+                                        : callableStatement.getObject(index));
                     }
                 }
                 result.setResultCount(resultCount);
@@ -680,11 +690,33 @@ public class DbModule implements ModuleService {
         return builder.toString();
     }
 
+    private String readProcedureClob(Clob clob) throws SQLException {
+        if (clob == null) {
+            return null;
+        }
+        try (Reader reader = clob.getCharacterStream()) {
+            StringBuilder text = new StringBuilder();
+            char[] buffer = new char[8192];
+            int count;
+            while ((count = reader.read(buffer)) != -1) {
+                text.append(buffer, 0, count);
+            }
+            return text.toString();
+        } catch (IOException e) {
+            throw new SQLException("读取存储过程CLOB输出失败", e);
+        } finally {
+            clob.free();
+        }
+    }
+
     private int getProcedureSqlType(String jdbcType) {
         if (StringUtils.isBlank(jdbcType)) {
             throw new APIException("存储过程JDBC类型不能为空");
         }
         String type = jdbcType.trim().toUpperCase(Locale.ROOT);
+        if (PROCEDURE_JDBC_TYPE_CLOB.equals(type)) {
+            return Types.CLOB;
+        }
         if (PROCEDURE_JDBC_TYPE_VARCHAR.equals(type)) {
             return Types.VARCHAR;
         }

@@ -295,7 +295,7 @@
 
     table {
       width: 100%;
-      min-width: 1230px;
+      min-width: 850px;
       border-collapse: collapse;
       table-layout: fixed;
     }
@@ -335,34 +335,7 @@
     .w-dir { width: 92px; }
     .w-param-type { width: 106px; }
     .w-type { width: 112px; }
-    .w-required { width: 86px; }
-    .w-default { width: 108px; }
-    .w-check { width: 108px; }
-    .w-expression { width: 148px; }
-    .w-desc { width: 148px; }
     .w-op { width: 108px; }
-
-    .tag {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 48px;
-      height: 22px;
-      padding: 0 7px;
-      border-radius: 11px;
-      font-size: 11px;
-      font-weight: 600;
-    }
-
-    .tag.in { color: #075985; background: #e0f2fe; }
-    .tag.out { color: #166534; background: #dcfce7; }
-    .tag.inout { color: #92400e; background: #fef3c7; }
-    .tag.cursor { color: #6d28d9; background: #ede9fe; }
-
-    .disabled-cell {
-      color: #98a2b3;
-      background: #f8fafc;
-    }
 
     .mini-actions {
       display: flex;
@@ -370,24 +343,6 @@
       gap: 7px;
       color: var(--primary);
       white-space: nowrap;
-    }
-
-    .result-layout {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    pre {
-      margin: 0;
-      min-height: 154px;
-      padding: 12px;
-      overflow: auto;
-      border: 1px solid #d9e2ef;
-      border-radius: 3px;
-      background: var(--code);
-      color: #1f2937;
-      font: 12px/1.55 Consolas, "Courier New", monospace;
     }
 
     .aside {
@@ -560,7 +515,7 @@
               <label>调用预览</label>
               <div>
                 <div class="code-box">{ call PKG_EMPLOYEE_QUERY.QUERY_EMPLOYEE_LIST(?, ?, ?, ?, ?) }</div>
-                <div class="preview-note">只读自动预览：存储过程名称和参数顺序、方向、JDBC类型配置完整后显示；新增未配置完整时显示“请先完善过程参数”。</div>
+                <div class="preview-note">只读自动预览：存储过程名称和参数名称、编码、类型、顺序、方向、JDBC 类型配置完整后显示；新增未配置完整时显示“请先完善过程参数”。</div>
               </div>
             </div>
           </section>
@@ -569,7 +524,7 @@
             <h2 class="section-title">过程参数</h2>
             <div class="button-row">
               <button class="primary">新增参数</button>
-              <span class="inline-hint">参数顺序直接维护 orderNo；保存前按 orderNo 升序校验并展示。</span>
+              <span class="inline-hint">参数顺序直接维护 orderNo；必须从 1 开始连续编号，保存前按升序校验并展示。</span>
             </div>
 
             <div class="param-table-wrap">
@@ -582,17 +537,13 @@
                     <th class="w-dir">参数方向</th>
                     <th class="w-param-type">参数类型</th>
                     <th class="w-type">JDBC类型</th>
-                    <th class="w-required">是否必填</th>
-                    <th class="w-default">默认值</th>
-                    <th class="w-check">校验类型</th>
-                    <th class="w-expression">校验表达式</th>
-                    <th class="w-desc">校验说明</th>
+
                     <th class="w-op">操作</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody id="procedure-param-list">
                   <tr>
-                    <td><input value="1" /></td>
+                    <td><input type="number" min="1" step="1" value="1" /></td>
                     <td><input value="部门ID" /></td>
                     <td><input value="deptId" /></td>
                     <td>
@@ -619,17 +570,14 @@
                         <option>BIGINT</option>
                         <option>DATE</option>
                         <option>TIMESTAMP</option>
+                        <option>CLOB</option>
                       </select>
                     </td>
-                    <td><select><option>是</option></select></td>
-                    <td><input value="10" /></td>
-                    <td><select><option>不校验</option></select></td>
-                    <td><input placeholder="可为空" /></td>
-                    <td><input value="部门ID必须为数字" /></td>
+
                     <td><div class="mini-actions"><span>编辑</span><span>删除</span></div></td>
                   </tr>
                   <tr>
-                    <td><input value="2" /></td>
+                    <td><input type="number" min="1" step="1" value="2" /></td>
                     <td><input value="最低薪资" /></td>
                     <td><input value="minSalary" /></td>
                     <td>
@@ -656,17 +604,14 @@
                         <option>BIGINT</option>
                         <option>DATE</option>
                         <option>TIMESTAMP</option>
+                        <option>CLOB</option>
                       </select>
                     </td>
-                    <td><select><option>否</option></select></td>
-                    <td><input value="5000" /></td>
-                    <td><select><option>不校验</option></select></td>
-                    <td><input placeholder="可为空" /></td>
-                    <td><input value="入参传入，执行后返回" /></td>
+
                     <td><div class="mini-actions"><span>编辑</span><span>删除</span></div></td>
                   </tr>
                   <tr>
-                    <td><input value="3" /></td>
+                    <td><input type="number" min="1" step="1" value="3" /></td>
                     <td><input value="返回状态" /></td>
                     <td><input value="status" /></td>
                     <td>
@@ -693,17 +638,14 @@
                         <option>DECIMAL</option>
                         <option>DATE</option>
                         <option>TIMESTAMP</option>
+                        <option>CLOB</option>
                       </select>
                     </td>
-                    <td class="disabled-cell">不适用</td>
-                    <td class="disabled-cell">不适用</td>
-                    <td class="disabled-cell">不适用</td>
-                    <td class="disabled-cell">不适用</td>
-                    <td class="disabled-cell">由过程返回</td>
+
                     <td><div class="mini-actions"><span>编辑</span><span>删除</span></div></td>
                   </tr>
                   <tr>
-                    <td><input value="4" /></td>
+                    <td><input type="number" min="1" step="1" value="4" /></td>
                     <td><input value="返回消息" /></td>
                     <td><input value="message" /></td>
                     <td>
@@ -730,17 +672,14 @@
                         <option>DECIMAL</option>
                         <option>DATE</option>
                         <option>TIMESTAMP</option>
+                        <option>CLOB</option>
                       </select>
                     </td>
-                    <td class="disabled-cell">不适用</td>
-                    <td class="disabled-cell">不适用</td>
-                    <td class="disabled-cell">不适用</td>
-                    <td class="disabled-cell">不适用</td>
-                    <td class="disabled-cell">由过程返回</td>
+
                     <td><div class="mini-actions"><span>编辑</span><span>删除</span></div></td>
                   </tr>
                   <tr>
-                    <td><input value="5" /></td>
+                    <td><input type="number" min="1" step="1" value="5" /></td>
                     <td><input value="员工列表" /></td>
                     <td><input value="data" /></td>
                     <td>
@@ -762,13 +701,10 @@
                         <option>DECIMAL</option>
                         <option>DATE</option>
                         <option>TIMESTAMP</option>
+                        <option>CLOB</option>
                       </select>
                     </td>
-                    <td class="disabled-cell">不适用</td>
-                    <td class="disabled-cell">不适用</td>
-                    <td class="disabled-cell">不适用</td>
-                    <td class="disabled-cell">不适用</td>
-                    <td class="disabled-cell">SYS_REFCURSOR</td>
+
                     <td><div class="mini-actions"><span>编辑</span><span>删除</span></div></td>
                   </tr>
                 </tbody>
@@ -791,8 +727,10 @@
               <li>type=2 时隐藏 SQL 拼接字段。</li>
               <li>新增 procedureName，保存时必填。</li>
               <li>参数表保留 type；新增 direction、jdbcType、orderNo。</li>
-              <li>CURSOR 只能配置为 OUT。</li>
-              <li>参数排序直接编辑 orderNo。</li>
+              <li>每个参数都填写名称、编码、类型、方向、JDBC 类型和顺序；同一接口内编码不能重复。</li>
+              <li>CURSOR 只能配置为 OUT，且参数类型固定为“列表”。</li>
+              <li>参数排序直接编辑 orderNo，值必须从 1 开始连续。</li>
+              <li>JDBC 类型下拉展示名称，保存请求提交数值 1~8；后端会转换为字符串。</li>
               <li>调用预览不提供手动按钮，按完整参数配置自动显示。</li>
             </ul>
           </div>
@@ -801,30 +739,32 @@
             <div class="aside-title">参数方向规则</div>
             <table class="field-map">
               <tr><th>方向</th><th>提交值</th><th>调用方</th></tr>
-              <tr><td>IN</td><td>1</td><td>必须/可选传入</td></tr>
+              <tr><td>IN</td><td>1</td><td>可传入；未传或 null 按 SQL NULL 绑定</td></tr>
               <tr><td>OUT</td><td>2</td><td>不传，由过程返回</td></tr>
-              <tr><td>INOUT</td><td>3</td><td>传入且返回</td></tr>
+              <tr><td>INOUT</td><td>3</td><td>可传入且返回；未传或 null 按 SQL NULL 绑定</td></tr>
             </table>
           </div>
 
           <div class="aside-card">
             <div class="aside-title">参数类型</div>
             <ul class="rule-list">
-              <li>IN/INOUT 参数用于调用方入参校验，建议必填。</li>
-              <li>OUT 标量参数用于说明返回值业务类型，建议显示并配置。</li>
+              <li>参数类型用于说明业务数据类型；存储过程不配置必填、默认值和业务校验。</li>
+              <li>OUT 标量参数用于说明返回值业务类型，应配置并展示。</li>
               <li>OUT CURSOR 参数固定为列表，表示返回结果集。</li>
               <li>字段值沿用原接口参数 type：字符串、整数、浮点数、日期、列表。</li>
-              <li>JDBC 类型用于数据库绑定，不能替代参数类型的业务校验含义。</li>
+              <li>JDBC 类型用于入参转换和数据库绑定，参数类型用于业务展示。</li>
             </ul>
           </div>
 
           <div class="aside-card">
             <div class="aside-title">JDBC 类型</div>
             <ul class="rule-list">
+              <li>下拉展示类型名称，保存请求提交 1~8；后端入库统一保存为字符串。</li>
               <li>VARCHAR：VARCHAR2、CHAR。</li>
               <li>INTEGER/BIGINT/DECIMAL：Oracle NUMBER。</li>
               <li>DATE：yyyy-MM-dd 或 yyyy-MM-dd HH:mm:ss。</li>
               <li>TIMESTAMP：yyyy-MM-dd HH:mm:ss。</li>
+              <li>CLOB：长文本，支持 IN、OUT、INOUT，参数类型选择“字符串”。</li>
               <li>CURSOR：Oracle SYS_REFCURSOR。</li>
               <li>选择 CURSOR 时 direction 必须为 OUT。</li>
               <li>direction 为 IN/INOUT 时，JDBC 类型下拉不展示 CURSOR。</li>
@@ -837,19 +777,20 @@
               <li>Oracle CallableStatement 按位置绑定。</li>
               <li>orderNo=1 对应第一个问号。</li>
               <li>顺序配置错会导致参数绑定错位。</li>
-              <li>同一接口内不允许重复。</li>
-              <li>建议保存时校验为正整数，并按升序回显。</li>
+              <li>同一接口内不允许重复，且必须从 1 开始连续编号。</li>
+              <li>保存时校验为连续正整数，并按升序回显。</li>
             </ul>
           </div>
 
           <div class="aside-card">
             <div class="aside-title">参数表交互说明</div>
             <ul class="rule-list">
-              <li>新增参数只追加一行，默认 orderNo 可取当前最大值+1。</li>
+              <li>新增参数只追加一行，默认 orderNo 取当前参数数量+1。</li>
               <li>删除操作只保留行内删除。</li>
-              <li>方向为 OUT 时，必填、默认值、校验字段禁用。</li>
-              <li>方向为 IN/INOUT 时，入参校验字段可编辑。</li>
+              <li>所有方向均不展示、配置必填、默认值和业务校验字段。</li>
+              <li>IN/INOUT 保留 JDBC 类型转换；未传或 null 按 SQL NULL 绑定。</li>
               <li>选择 CURSOR 时，方向自动设为 OUT 并禁用修改。</li>
+              <li>选择 CURSOR 时，参数类型自动设为“列表”并禁用修改；非 OUT 方向的 JDBC 下拉不展示 CURSOR。</li>
               <li>如果已选 CURSOR 后改方向，需先清空或切换 JDBC 类型。</li>
             </ul>
           </div>
@@ -859,7 +800,7 @@
             <ul class="rule-list">
               <li>新增页不放“生成预览”按钮。</li>
               <li>procedureName 为空时显示待配置。</li>
-              <li>任一参数缺少 orderNo、direction、jdbcType 时显示待配置。</li>
+              <li>任一参数缺少名称、编码、类型、orderNo、direction、jdbcType 时显示待配置。</li>
               <li>配置完整后按参数数量显示 `{ call ...(?, ?) }`。</li>
               <li>该预览只表示绑定结构，不校验数据库过程是否存在。</li>
             </ul>
@@ -873,7 +814,7 @@
               <tr><td>存储过程名称</td><td>procedureName</td></tr>
               <tr><td>参数方向</td><td>apiParamList[].direction</td></tr>
               <tr><td>参数类型</td><td>apiParamList[].type</td></tr>
-              <tr><td>JDBC类型</td><td>apiParamList[].jdbcType</td></tr>
+              <tr><td>JDBC类型（1~8）</td><td>apiParamList[].jdbcType；后端入库为 VARCHAR、CLOB 等字符串</td></tr>
               <tr><td>参数顺序</td><td>apiParamList[].orderNo</td></tr>
             </table>
           </div>
@@ -881,5 +822,24 @@
       </div>
     </div>
   </div>
+  <script>
+    // 原型中的下拉框展示名称；实际保存请求统一提交以下数值，不要求前端转换为 JDBC 字符串。
+    (function () {
+      const optionValues = {
+        4: { IN: "1", OUT: "2", INOUT: "3" },
+        5: { "字符串": "1", "整数": "2", "浮点数": "3", "日期": "4", "列表": "5" },
+        6: { VARCHAR: "1", INTEGER: "2", BIGINT: "3", DECIMAL: "4", DATE: "5", TIMESTAMP: "6", CLOB: "7", CURSOR: "8" }
+      };
+      document.querySelectorAll("#procedure-param-list tr").forEach(function (row) {
+        Object.keys(optionValues).forEach(function (column) {
+          const select = row.children[Number(column) - 1].querySelector("select");
+          if (!select) return;
+          Array.from(select.options).forEach(function (option) {
+            option.value = optionValues[column][option.textContent.trim()];
+          });
+        });
+      });
+    }());
+  </script>
 </body>
 </html>
