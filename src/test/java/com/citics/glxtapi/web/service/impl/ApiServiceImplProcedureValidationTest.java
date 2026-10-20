@@ -38,35 +38,35 @@ public class ApiServiceImplProcedureValidationTest {
     @Test(expected = MybatisPlusException.class)
     public void rejectsOrderNumbersWithGapsBeforeTheyCanBindTheWrongPosition() {
         validate(Arrays.asList(
-                procedureParam("first", PROCEDURE_PARAM_DIRECTION_IN, "DECIMAL", FILED_TYPE_INT, 1),
-                procedureParam("third", PROCEDURE_PARAM_DIRECTION_IN, "DECIMAL", FILED_TYPE_INT, 3)
+                procedureParam("first", PROCEDURE_PARAM_DIRECTION_IN, 4, FILED_TYPE_INT, 1),
+                procedureParam("third", PROCEDURE_PARAM_DIRECTION_IN, 4, FILED_TYPE_INT, 3)
         ));
     }
 
     @Test(expected = MybatisPlusException.class)
     public void rejectsCursorWhenBusinessTypeIsNotList() {
         validate(Arrays.asList(
-                procedureParam("data", PROCEDURE_PARAM_DIRECTION_OUT, "CURSOR", FILED_TYPE_INT, 1)
+                procedureParam("data", PROCEDURE_PARAM_DIRECTION_OUT, 8, FILED_TYPE_INT, 1)
         ));
     }
 
     @Test(expected = MybatisPlusException.class)
     public void rejectsDuplicateProcedureParameterCodes() {
         validate(Arrays.asList(
-                procedureParam("same", PROCEDURE_PARAM_DIRECTION_IN, "DECIMAL", FILED_TYPE_INT, 1),
-                procedureParam("same", PROCEDURE_PARAM_DIRECTION_IN, "DECIMAL", FILED_TYPE_INT, 2)
+                procedureParam("same", PROCEDURE_PARAM_DIRECTION_IN, 4, FILED_TYPE_INT, 1),
+                procedureParam("same", PROCEDURE_PARAM_DIRECTION_IN, 4, FILED_TYPE_INT, 2)
         ));
     }
 
     @Test
-    public void acceptsCursorListAndNormalizesNumericJdbcTypeBeforePersistence() {
-        ApiParam input = procedureParam("id", PROCEDURE_PARAM_DIRECTION_IN, "4", FILED_TYPE_INT, 1);
-        ApiParam cursor = procedureParam("data", PROCEDURE_PARAM_DIRECTION_OUT, "8", FILED_TYPE_LIST, 2);
+    public void acceptsCursorListAndKeepsNumericJdbcTypeForPersistence() {
+        ApiParam input = procedureParam("id", PROCEDURE_PARAM_DIRECTION_IN, 4, FILED_TYPE_INT, 1);
+        ApiParam cursor = procedureParam("data", PROCEDURE_PARAM_DIRECTION_OUT, 8, FILED_TYPE_LIST, 2);
 
         validate(Arrays.asList(input, cursor));
 
-        org.junit.Assert.assertEquals("DECIMAL", input.getJdbcType());
-        org.junit.Assert.assertEquals("CURSOR", cursor.getJdbcType());
+        org.junit.Assert.assertEquals(Integer.valueOf(4), input.getJdbcType());
+        org.junit.Assert.assertEquals(Integer.valueOf(8), cursor.getJdbcType());
     }
 
     private void validate(List<ApiParam> params) {
@@ -76,7 +76,7 @@ public class ApiServiceImplProcedureValidationTest {
         ReflectionTestUtils.invokeMethod(service, "validateProcedureApi", dto, params, "demo");
     }
 
-    private ApiParam procedureParam(String code, Integer direction, String jdbcType, Integer type, Integer orderNo) {
+    private ApiParam procedureParam(String code, Integer direction, Integer jdbcType, Integer type, Integer orderNo) {
         ApiParam param = new ApiParam();
         param.setName(code);
         param.setCode(code);

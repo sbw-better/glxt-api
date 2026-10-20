@@ -162,21 +162,21 @@
 
 ### 6.4 JDBC 类型枚举
 
-| 展示值 | 提交值 | 适用 Oracle 类型 |
+| 展示值 | 数字字典值 | 适用 Oracle 类型 |
 |---|---|---|
-| VARCHAR | `VARCHAR` | `VARCHAR2`、`CHAR` |
-| INTEGER | `INTEGER` | `NUMBER(10)` 等 |
-| BIGINT | `BIGINT` | 大整数 `NUMBER` |
-| DECIMAL | `DECIMAL` | `NUMBER(p,s)` |
-| DATE | `DATE` | `DATE` |
-| TIMESTAMP | `TIMESTAMP` | `TIMESTAMP` |
-| `CLOB` | 长文本字符串 | 支持 IN/OUT/INOUT，业务类型 `type=1`；输入和输出均为 JSON 字符串 |
-| CURSOR | `CURSOR` | `SYS_REFCURSOR` |
+| VARCHAR | `1` | `VARCHAR2`、`CHAR` |
+| INTEGER | `2` | `NUMBER(10)` 等 |
+| BIGINT | `3` | 大整数 `NUMBER` |
+| DECIMAL | `4` | `NUMBER(p,s)` |
+| DATE | `5` | `DATE` |
+| TIMESTAMP | `6` | `TIMESTAMP` |
+| `CLOB` | `7` | 支持 IN/OUT/INOUT，业务类型 `type=1`；输入和输出均为 JSON 字符串 |
+| CURSOR | `8` | `SYS_REFCURSOR` |
 
 交互规则：
 
 - `CURSOR` 一期只允许 `direction=OUT`。
-- 如果用户选择 `jdbcType=CURSOR`，自动将方向设为 `OUT`，并禁用方向修改，或在保存前提示。
+- 如果用户选择 `jdbcType=8`（CURSOR），自动将方向设为 `OUT`，并禁用方向修改，或在保存前提示。
 - `DATE` 支持输入格式：`yyyy-MM-dd` 或 `yyyy-MM-dd HH:mm:ss`。
 - `TIMESTAMP` 支持输入格式：`yyyy-MM-dd HH:mm:ss`。
 
@@ -198,9 +198,9 @@ PROCEDURE QUERY_FUND(
 
 | orderNo | code | direction | jdbcType |
 |---:|---|---|---|
-| 1 | fundCode | IN | VARCHAR |
-| 2 | status | OUT | VARCHAR |
-| 3 | data | OUT | CURSOR |
+| 1 | fundCode | IN | 1（VARCHAR） |
+| 2 | status | OUT | 1（VARCHAR） |
+| 3 | data | OUT | 8（CURSOR） |
 
 后端实际调用：
 

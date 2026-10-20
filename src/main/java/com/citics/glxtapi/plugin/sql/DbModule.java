@@ -709,11 +709,14 @@ public class DbModule implements ModuleService {
         }
     }
 
-    private int getProcedureSqlType(String jdbcType) {
-        if (StringUtils.isBlank(jdbcType)) {
+    private int getProcedureSqlType(Integer jdbcType) {
+        if (jdbcType == null) {
             throw new APIException("存储过程JDBC类型不能为空");
         }
-        String type = jdbcType.trim().toUpperCase(Locale.ROOT);
+        String type = getProcedureJdbcTypeName(jdbcType);
+        if (StringUtils.isBlank(type)) {
+            throw new APIException("不支持的存储过程JDBC类型：" + jdbcType);
+        }
         if (PROCEDURE_JDBC_TYPE_CLOB.equals(type)) {
             return Types.CLOB;
         }
@@ -742,8 +745,8 @@ public class DbModule implements ModuleService {
         throw new APIException("不支持的存储过程JDBC类型：" + jdbcType);
     }
 
-    private boolean isProcedureCursorType(String jdbcType) {
-        return jdbcType != null && PROCEDURE_JDBC_TYPE_CURSOR.equals(jdbcType.trim().toUpperCase(Locale.ROOT));
+    private boolean isProcedureCursorType(Integer jdbcType) {
+        return PROCEDURE_JDBC_TYPE_VALUE_CURSOR == (jdbcType == null ? 0 : jdbcType);
     }
 
     private List<Map<String, Object>> resultSetToList(ResultSet resultSet, Integer fieldBackMode) throws SQLException {

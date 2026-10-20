@@ -21,7 +21,7 @@
 | 字段 | 前端字段 | 说明 |
 | --- | --- | --- |
 | `DIRECTION` | `direction` | 参数方向：`1=IN`、`2=OUT`、`3=INOUT` |
-| `JDBC_TYPE` | `jdbcType` | JDBC 绑定类型；数据库、导入导出和执行层均保存字符串值 |
+| `JDBC_TYPE` | `jdbcType` | JDBC 类型字典值；数据库、接口、导入导出均保存数字，执行时再解析为 JDBC 绑定类型 |
 | `ORDER_NO` | `orderNo` | 位置绑定顺序，从 `1` 开始 |
 
 `orderNo` 决定 `{ call PROC(?, ?, ...) }` 中占位符的位置，不按参数 `code` 绑定。同一个接口的 `orderNo` 必须唯一，且应与 Oracle 过程签名的顺序一致。
@@ -52,19 +52,19 @@ SQL 配置字段 `selectParam`、`fromParam`、`whereParamFixed`、`whereParamCh
 
 `type` 是业务展示类型，`jdbcType` 是数据库调用时的绑定类型，两者不能混用。
 
-| Oracle 常见类型 | `type` 建议 | 入库 `jdbcType` | 说明 |
+| Oracle 常见类型 | `type` 建议 | `jdbcType` 字典值 | 运行时 JDBC 类型 |
 | --- | ---: | --- | --- |
-| `VARCHAR2`、`CHAR` | `1` 字符串 | `VARCHAR` | JSON 请求和返回均为字符串 |
-| `NUMBER` 整数 | `2` 整型 | `DECIMAL`、`INTEGER` 或 `BIGINT` | Oracle `NUMBER` 未明确精度时优先使用 `DECIMAL` |
-| `NUMBER(p,s)` | `3` 浮点数 | `DECIMAL` | JSON 可传数值或数字字符串 |
-| `DATE` | `4` 日期 | `DATE` | 输入格式为 `yyyy-MM-dd` 或 `yyyy-MM-dd HH:mm:ss` |
-| `TIMESTAMP` | `4` 日期 | `TIMESTAMP` | 输入格式为 `yyyy-MM-dd HH:mm:ss` |
-| `CLOB` | `1` 字符串 | `CLOB` | 支持 IN、OUT、INOUT；JSON 中始终是字符串 |
-| `SYS_REFCURSOR` | `5` 列表 | `CURSOR` | 仅支持 OUT，返回到 `cursors` |
+| `VARCHAR2`、`CHAR` | `1` 字符串 | `1` | `VARCHAR`；JSON 请求和返回均为字符串 |
+| `NUMBER` 整数 | `2` 整型 | `2`、`3` 或 `4` | `INTEGER`、`BIGINT` 或 `DECIMAL`；未明确精度时优先 `4` |
+| `NUMBER(p,s)` | `3` 浮点数 | `4` | `DECIMAL`；JSON 可传数值或数字字符串 |
+| `DATE` | `4` 日期 | `5` | `DATE`；输入格式为 `yyyy-MM-dd` 或 `yyyy-MM-dd HH:mm:ss` |
+| `TIMESTAMP` | `4` 日期 | `6` | `TIMESTAMP`；输入格式为 `yyyy-MM-dd HH:mm:ss` |
+| `CLOB` | `1` 字符串 | `7` | `CLOB`；支持 IN、OUT、INOUT，JSON 中始终是字符串 |
+| `SYS_REFCURSOR` | `5` 列表 | `8` | `CURSOR`；仅支持 OUT，返回到 `cursors` |
 
 ### 4.1 JDBC 类型下拉值
 
-前端下拉可使用数字 value，保存时接口会把数字转换成标准字符串。配置查询、Excel 导入导出和执行层始终使用右列字符串。
+前端下拉、保存请求、配置查询、数据库和 Excel 导入导出统一使用左列数字。执行存储过程时，后端才按右列类型绑定参数或读取输出。
 
 | 下拉 value | `jdbcType` 字符串 |
 | ---: | --- |
@@ -83,13 +83,13 @@ SQL 配置字段 `selectParam`、`fromParam`、`whereParamFixed`、`whereParamCh
 { "jdbcType": 4 }
 ```
 
-后端会保存为：
+配置查询和数据库保存结果为：
 
 ```json
-{ "jdbcType": "DECIMAL" }
+{ "jdbcType": 4 }
 ```
 
-编辑已有配置时，接口返回的是字符串，前端应按上表反向映射为下拉数字。Excel 导入文件中的“存储过程 JDBC 类型”列填字符串，例如 `DECIMAL` 或 `CLOB`，不要填下拉数字。
+编辑已有配置时，接口直接返回数字。Excel 导入文件中的“存储过程 JDBC 类型”列填 `1` 至 `8` 的字典值，例如 `4`（DECIMAL）或 `7`（CLOB）。
 
 `CURSOR` 被选中时，前端应自动将 `direction` 设为 `OUT` 并禁用方向修改，同时将 `type` 设为列表。
 
@@ -218,12 +218,12 @@ POST /api/actuator/execute
 ## 9. 与 SQL 查询接口的关系
 
 - SQL 查询保存、参数必填与业务校验、分页、执行和导出逻辑保持不变。
-- 数字 `jdbcType` 到字符串的转换仅发生在 `type=2` 的存储过程保存流程。
+- `jdbcType` 的数字字典值仅在 `type=2` 的存储过程执行流程中解析为 JDBC 类型名称；SQL 参数逻辑不会读取该字段。
 - SQL 参数仍使用原有的 `type/required/defaultValue/validateType/expression/error` 配置。
 
 ## 10. 联调清单
 
-1. 保存带 IN、OUT、INOUT 的过程，确认数字下拉值入库后为 JDBC 字符串。
+1. 保存带 IN、OUT、INOUT 的过程，确认数字下拉值以相同数字写入数据库并由查询接口返回。
 2. 使用 `NUMBER` + `DECIMAL`、`VARCHAR2` + `VARCHAR`、`DATE` + `DATE` 联调。
 3. 验证 OUT `SYS_REFCURSOR` 返回到 `cursors`。
 4. 验证 OUT/INOUT `CLOB` 返回普通字符串，及 IN `CLOB` 的长文本传入。

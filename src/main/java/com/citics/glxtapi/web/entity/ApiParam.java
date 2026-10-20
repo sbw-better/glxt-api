@@ -60,9 +60,9 @@ public class ApiParam extends Model<ApiParam> {
     private Integer direction;
 
     @TableField("JDBC_TYPE")
-    @ApiModelProperty("存储过程JDBC类型")
+    @ApiModelProperty("存储过程JDBC类型字典值：1-VARCHAR，2-INTEGER，3-BIGINT，4-DECIMAL，5-DATE，6-TIMESTAMP，7-CLOB，8-CURSOR")
     @Excel(name = "存储过程JDBC类型")
-    private String jdbcType;
+    private Integer jdbcType;
 
     @TableField("ORDER_NO")
     @ApiModelProperty("存储过程参数顺序")

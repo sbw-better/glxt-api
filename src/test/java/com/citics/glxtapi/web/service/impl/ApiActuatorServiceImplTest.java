@@ -41,8 +41,9 @@ import static com.citics.glxtapi.web.constants.Constants.API_DEFAULT_DATA_SOURCE
 import static com.citics.glxtapi.web.constants.Constants.API_FIELD_BACK_MODE_DEFAULT;
 import static com.citics.glxtapi.web.constants.Constants.FILED_CHECK_TYPE_NO;
 import static com.citics.glxtapi.web.constants.Constants.INTERFACE_TYPE_PROCEDURE;
-import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_CURSOR;
-import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_VARCHAR;
+import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_VALUE_CLOB;
+import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_VALUE_CURSOR;
+import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_VALUE_VARCHAR;
 import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_PARAM_DIRECTION_IN;
 import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_PARAM_DIRECTION_OUT;
 import static com.citics.glxtapi.web.constants.Constants.WHETHER_NO;
@@ -304,7 +305,7 @@ public class ApiActuatorServiceImplTest {
     @Test
     public void procedureClobAcceptsStringInput() {
         ApiInterfaceVO api = procedureApi();
-        api.getApiParamList().get(0).setJdbcType("CLOB");
+        api.getApiParamList().get(0).setJdbcType(PROCEDURE_JDBC_TYPE_VALUE_CLOB);
         Map<String, Object> params = new java.util.HashMap<>();
         params.put("fundCode", "中文长文本");
         assertEquals("", service.procedureParamListValidate(api.getApiParamList().subList(0, 1), params, api));
@@ -328,14 +329,14 @@ public class ApiActuatorServiceImplTest {
         apiInterface.setType(INTERFACE_TYPE_PROCEDURE);
         apiInterface.setProcedureName("PKG.PROC");
         apiInterface.setApiParamList(Arrays.asList(
-                procedureParam("fundCode", PROCEDURE_PARAM_DIRECTION_IN, PROCEDURE_JDBC_TYPE_VARCHAR, 1),
-                procedureParam("status", PROCEDURE_PARAM_DIRECTION_OUT, PROCEDURE_JDBC_TYPE_VARCHAR, 2),
-                procedureParam("data", PROCEDURE_PARAM_DIRECTION_OUT, PROCEDURE_JDBC_TYPE_CURSOR, 3)
+                procedureParam("fundCode", PROCEDURE_PARAM_DIRECTION_IN, PROCEDURE_JDBC_TYPE_VALUE_VARCHAR, 1),
+                procedureParam("status", PROCEDURE_PARAM_DIRECTION_OUT, PROCEDURE_JDBC_TYPE_VALUE_VARCHAR, 2),
+                procedureParam("data", PROCEDURE_PARAM_DIRECTION_OUT, PROCEDURE_JDBC_TYPE_VALUE_CURSOR, 3)
         ));
         return apiInterface;
     }
 
-    private ApiParam procedureParam(String code, Integer direction, String jdbcType, Integer orderNo) {
+    private ApiParam procedureParam(String code, Integer direction, Integer jdbcType, Integer orderNo) {
         ApiParam param = new ApiParam();
         param.setName(code);
         param.setCode(code);

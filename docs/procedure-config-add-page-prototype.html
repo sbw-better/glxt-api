@@ -730,7 +730,7 @@
               <li>每个参数都填写名称、编码、类型、方向、JDBC 类型和顺序；同一接口内编码不能重复。</li>
               <li>CURSOR 只能配置为 OUT，且参数类型固定为“列表”。</li>
               <li>参数排序直接编辑 orderNo，值必须从 1 开始连续。</li>
-              <li>JDBC 类型下拉展示名称，保存请求提交数值 1~8；后端会转换为字符串。</li>
+              <li>JDBC 类型下拉展示名称，保存请求、数据库和配置查询统一使用数值 1~8；执行时后端再解析类型。</li>
               <li>调用预览不提供手动按钮，按完整参数配置自动显示。</li>
             </ul>
           </div>
@@ -759,7 +759,7 @@
           <div class="aside-card">
             <div class="aside-title">JDBC 类型</div>
             <ul class="rule-list">
-              <li>下拉展示类型名称，保存请求提交 1~8；后端入库统一保存为字符串。</li>
+              <li>下拉展示类型名称，保存请求提交 1~8；后端以相同数值入库和返回。</li>
               <li>VARCHAR：VARCHAR2、CHAR。</li>
               <li>INTEGER/BIGINT/DECIMAL：Oracle NUMBER。</li>
               <li>DATE：yyyy-MM-dd 或 yyyy-MM-dd HH:mm:ss。</li>
@@ -814,7 +814,7 @@
               <tr><td>存储过程名称</td><td>procedureName</td></tr>
               <tr><td>参数方向</td><td>apiParamList[].direction</td></tr>
               <tr><td>参数类型</td><td>apiParamList[].type</td></tr>
-              <tr><td>JDBC类型（1~8）</td><td>apiParamList[].jdbcType；后端入库为 VARCHAR、CLOB 等字符串</td></tr>
+              <tr><td>JDBC类型（1~8）</td><td>apiParamList[].jdbcType；数据库、接口返回和 Excel 均为数值字典值</td></tr>
               <tr><td>参数顺序</td><td>apiParamList[].orderNo</td></tr>
             </table>
           </div>

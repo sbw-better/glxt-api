@@ -6,38 +6,24 @@ import org.junit.Test;
 
 import java.util.Arrays;
 
-import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_CLOB;
-import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_CURSOR;
-import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_DATE;
-import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_DECIMAL;
-import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_BIGINT;
-import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_INTEGER;
-import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_TIMESTAMP;
-import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_VARCHAR;
+import static com.citics.glxtapi.web.constants.Constants.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class ApiServiceImplProcedureJdbcTypeTest {
 
     @Test
-    public void normalizesFrontendDictionaryValuesToJdbcTypeStrings() {
-        assertEquals(PROCEDURE_JDBC_TYPE_VARCHAR, ApiServiceImpl.normalizeProcedureJdbcType("1"));
-        assertEquals(PROCEDURE_JDBC_TYPE_INTEGER, ApiServiceImpl.normalizeProcedureJdbcType("2"));
-        assertEquals(PROCEDURE_JDBC_TYPE_BIGINT, ApiServiceImpl.normalizeProcedureJdbcType("3"));
-        assertEquals(PROCEDURE_JDBC_TYPE_DECIMAL, ApiServiceImpl.normalizeProcedureJdbcType("4"));
-        assertEquals(PROCEDURE_JDBC_TYPE_DATE, ApiServiceImpl.normalizeProcedureJdbcType("5"));
-        assertEquals(PROCEDURE_JDBC_TYPE_TIMESTAMP, ApiServiceImpl.normalizeProcedureJdbcType("6"));
-        assertEquals(PROCEDURE_JDBC_TYPE_CLOB, ApiServiceImpl.normalizeProcedureJdbcType("7"));
-        assertEquals(PROCEDURE_JDBC_TYPE_CURSOR, ApiServiceImpl.normalizeProcedureJdbcType("8"));
-    }
-
-    @Test
-    public void preservesExistingStringConfigurations() {
-        assertEquals(PROCEDURE_JDBC_TYPE_VARCHAR, ApiServiceImpl.normalizeProcedureJdbcType(" varchar "));
-        assertEquals(PROCEDURE_JDBC_TYPE_CLOB, ApiServiceImpl.normalizeProcedureJdbcType("CLOB"));
-        assertNull(ApiServiceImpl.normalizeProcedureJdbcType(null));
+    public void resolvesPersistedDictionaryValuesToJdbcTypeNames() {
+        assertEquals(PROCEDURE_JDBC_TYPE_VARCHAR, getProcedureJdbcTypeName(1));
+        assertEquals(PROCEDURE_JDBC_TYPE_INTEGER, getProcedureJdbcTypeName(2));
+        assertEquals(PROCEDURE_JDBC_TYPE_BIGINT, getProcedureJdbcTypeName(3));
+        assertEquals(PROCEDURE_JDBC_TYPE_DECIMAL, getProcedureJdbcTypeName(4));
+        assertEquals(PROCEDURE_JDBC_TYPE_DATE, getProcedureJdbcTypeName(5));
+        assertEquals(PROCEDURE_JDBC_TYPE_TIMESTAMP, getProcedureJdbcTypeName(6));
+        assertEquals(PROCEDURE_JDBC_TYPE_CLOB, getProcedureJdbcTypeName(7));
+        assertEquals(PROCEDURE_JDBC_TYPE_CURSOR, getProcedureJdbcTypeName(8));
+        assertEquals(null, getProcedureJdbcTypeName(99));
     }
 
     @Test
@@ -55,13 +41,13 @@ public class ApiServiceImplProcedureJdbcTypeTest {
         ApiParam input = new ApiParam();
         input.setCode("content");
         input.setDirection(1);
-        input.setJdbcType("7");
+        input.setJdbcType(7);
         input.setOrderNo(1);
 
         ApiParam output = new ApiParam();
         output.setCode("data");
         output.setDirection(2);
-        output.setJdbcType("8");
+        output.setJdbcType(8);
         output.setOrderNo(2);
 
         ApiInterfaceDTO dto = new ApiInterfaceDTO();

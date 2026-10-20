@@ -19,7 +19,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_VARCHAR;
+import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_VALUE_CLOB;
+import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_VALUE_VARCHAR;
 import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_PARAM_DIRECTION_IN;
 import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_PARAM_DIRECTION_OUT;
 import static org.junit.Assert.assertEquals;
@@ -113,7 +114,7 @@ public class DbModuleProcedureTest {
         ApiParam out = procedureParam("output", 2, 3);
         ApiParam empty = procedureParam("empty", 1, 4);
         for (ApiParam param : Arrays.asList(in, inout, out, empty)) {
-            param.setJdbcType("CLOB");
+            param.setJdbcType(PROCEDURE_JDBC_TYPE_VALUE_CLOB);
         }
         Map<String, Object> params = new HashMap<>();
         params.put("input", text);
@@ -143,7 +144,7 @@ public class DbModuleProcedureTest {
         param.setName(code);
         param.setCode(code);
         param.setDirection(direction);
-        param.setJdbcType(PROCEDURE_JDBC_TYPE_VARCHAR);
+        param.setJdbcType(PROCEDURE_JDBC_TYPE_VALUE_VARCHAR);
         param.setOrderNo(orderNo);
         return param;
     }

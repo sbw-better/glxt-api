@@ -416,8 +416,8 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
                 builder.append(", ");
             }
             ApiParam param = apiParamList.get(i);
-            // 预览接口接受前端下拉提交的 1~8，同时按实际入库的 JDBC 字符串展示。
-            String jdbcType = normalizeProcedureJdbcType(param.getJdbcType());
+            // 前端、数据库均使用 JDBC 类型字典值；预览时解析为可读的 JDBC 类型名称。
+            String jdbcType = getProcedureJdbcTypeName(param.getJdbcType());
             builder.append("?")
                     .append(" /* ")
                     .append(param.getCode())
@@ -747,8 +747,8 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
             isFalse(apiParam.getType() == null, "存储过程参数类型不能为空，请核对！");
             isFalse(!isSupportedProcedureParamType(apiParam.getType()), "存储过程参数类型不支持：" + apiParam.getType());
             isFalse(apiParam.getDirection() == null, "存储过程参数方向不能为空，请核对！");
-            String jdbcType = normalizeProcedureJdbcType(apiParam.getJdbcType());
-            isFalse(StringUtils.isEmpty(jdbcType), "存储过程参数JDBC类型不能为空，请核对！");
+            Integer jdbcType = apiParam.getJdbcType();
+            isFalse(jdbcType == null, "存储过程参数JDBC类型不能为空，请核对！");
             isFalse(apiParam.getOrderNo() == null, "存储过程参数顺序不能为空，请核对！");
             isFalse(!apiParam.getDirection().equals(PROCEDURE_PARAM_DIRECTION_IN)
                             && !apiParam.getDirection().equals(PROCEDURE_PARAM_DIRECTION_OUT)
@@ -756,13 +756,12 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
                     "存储过程参数方向仅支持IN、OUT、INOUT，请核对！");
             isFalse(!isSupportedProcedureJdbcType(jdbcType),
                     "存储过程参数JDBC类型不支持：" + apiParam.getJdbcType());
-            // 前端下拉可提交 1~8；在过程配置保存时立即标准化，后续执行和入库始终使用字符串。
-            apiParam.setJdbcType(jdbcType);
+            // 前端、数据库和 Excel 统一存储 1~8 的 JDBC 类型字典值。
             // 游标入参和INOUT游标在不同数据库驱动上差异大，一期只支持OUT游标。
-            isFalse(PROCEDURE_JDBC_TYPE_CURSOR.equals(jdbcType)
+            isFalse(PROCEDURE_JDBC_TYPE_VALUE_CURSOR == jdbcType
                     && !apiParam.getDirection().equals(PROCEDURE_PARAM_DIRECTION_OUT),
                     "存储过程CURSOR参数一期仅支持OUT方向，请核对！");
-            isFalse(PROCEDURE_JDBC_TYPE_CURSOR.equals(jdbcType)
+            isFalse(PROCEDURE_JDBC_TYPE_VALUE_CURSOR == jdbcType
                     && !Integer.valueOf(FILED_TYPE_LIST).equals(apiParam.getType()),
                     "存储过程CURSOR参数类型必须为列表，请核对！");
             isFalse(codeSet.contains(apiParam.getCode()), "存储过程参数编码重复：" + apiParam.getCode());
@@ -775,16 +774,8 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
                 "存储过程参数顺序必须从1开始连续编号，请核对！");
     }
 
-    private boolean isSupportedProcedureJdbcType(String jdbcType) {
-        String type = jdbcType == null ? "" : jdbcType.trim().toUpperCase();
-        return PROCEDURE_JDBC_TYPE_CLOB.equals(type)
-                || PROCEDURE_JDBC_TYPE_VARCHAR.equals(type)
-                || PROCEDURE_JDBC_TYPE_INTEGER.equals(type)
-                || PROCEDURE_JDBC_TYPE_BIGINT.equals(type)
-                || PROCEDURE_JDBC_TYPE_DECIMAL.equals(type)
-                || PROCEDURE_JDBC_TYPE_DATE.equals(type)
-                || PROCEDURE_JDBC_TYPE_TIMESTAMP.equals(type)
-                || PROCEDURE_JDBC_TYPE_CURSOR.equals(type);
+    private boolean isSupportedProcedureJdbcType(Integer jdbcType) {
+        return getProcedureJdbcTypeName(jdbcType) != null;
     }
 
     static boolean hasContinuousProcedureOrderNo(Set<Integer> orderNoSet, int paramCount) {
@@ -805,38 +796,6 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
                 || FILED_TYPE_FLOAT == type
                 || FILED_TYPE_DATE == type
                 || FILED_TYPE_LIST == type;
-    }
-
-    static String normalizeProcedureJdbcType(String jdbcType) {
-        if (StringUtils.isEmpty(jdbcType)) {
-            return null;
-        }
-        String type = jdbcType.trim().toUpperCase();
-        if (String.valueOf(PROCEDURE_JDBC_TYPE_VALUE_VARCHAR).equals(type)) {
-            return PROCEDURE_JDBC_TYPE_VARCHAR;
-        }
-        if (String.valueOf(PROCEDURE_JDBC_TYPE_VALUE_INTEGER).equals(type)) {
-            return PROCEDURE_JDBC_TYPE_INTEGER;
-        }
-        if (String.valueOf(PROCEDURE_JDBC_TYPE_VALUE_BIGINT).equals(type)) {
-            return PROCEDURE_JDBC_TYPE_BIGINT;
-        }
-        if (String.valueOf(PROCEDURE_JDBC_TYPE_VALUE_DECIMAL).equals(type)) {
-            return PROCEDURE_JDBC_TYPE_DECIMAL;
-        }
-        if (String.valueOf(PROCEDURE_JDBC_TYPE_VALUE_DATE).equals(type)) {
-            return PROCEDURE_JDBC_TYPE_DATE;
-        }
-        if (String.valueOf(PROCEDURE_JDBC_TYPE_VALUE_TIMESTAMP).equals(type)) {
-            return PROCEDURE_JDBC_TYPE_TIMESTAMP;
-        }
-        if (String.valueOf(PROCEDURE_JDBC_TYPE_VALUE_CLOB).equals(type)) {
-            return PROCEDURE_JDBC_TYPE_CLOB;
-        }
-        if (String.valueOf(PROCEDURE_JDBC_TYPE_VALUE_CURSOR).equals(type)) {
-            return PROCEDURE_JDBC_TYPE_CURSOR;
-        }
-        return type;
     }
 
     private boolean isImportDefaultConnection(ApiInterfaceDTO dto) {

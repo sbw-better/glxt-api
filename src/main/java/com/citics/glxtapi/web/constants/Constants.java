@@ -165,8 +165,7 @@ public class Constants {
     public static String PROCEDURE_JDBC_TYPE_CURSOR = "CURSOR";
 
     /**
-     * 存储过程 JDBC 类型的前端下拉值。配置保存时会转换为上面的字符串类型，
-     * 因此数据库、Excel 和执行层均不依赖这些数字。
+     * 存储过程 JDBC 类型字典值。前端、数据库和 Excel 均使用数字；执行层再解析为 JDBC 类型名称。
      */
     public static int PROCEDURE_JDBC_TYPE_VALUE_VARCHAR = 1;
     public static int PROCEDURE_JDBC_TYPE_VALUE_INTEGER = 2;
@@ -176,6 +175,37 @@ public class Constants {
     public static int PROCEDURE_JDBC_TYPE_VALUE_TIMESTAMP = 6;
     public static int PROCEDURE_JDBC_TYPE_VALUE_CLOB = 7;
     public static int PROCEDURE_JDBC_TYPE_VALUE_CURSOR = 8;
+
+    public static String getProcedureJdbcTypeName(Integer jdbcType) {
+        if (jdbcType == null) {
+            return null;
+        }
+        if (PROCEDURE_JDBC_TYPE_VALUE_VARCHAR == jdbcType) {
+            return PROCEDURE_JDBC_TYPE_VARCHAR;
+        }
+        if (PROCEDURE_JDBC_TYPE_VALUE_INTEGER == jdbcType) {
+            return PROCEDURE_JDBC_TYPE_INTEGER;
+        }
+        if (PROCEDURE_JDBC_TYPE_VALUE_BIGINT == jdbcType) {
+            return PROCEDURE_JDBC_TYPE_BIGINT;
+        }
+        if (PROCEDURE_JDBC_TYPE_VALUE_DECIMAL == jdbcType) {
+            return PROCEDURE_JDBC_TYPE_DECIMAL;
+        }
+        if (PROCEDURE_JDBC_TYPE_VALUE_DATE == jdbcType) {
+            return PROCEDURE_JDBC_TYPE_DATE;
+        }
+        if (PROCEDURE_JDBC_TYPE_VALUE_TIMESTAMP == jdbcType) {
+            return PROCEDURE_JDBC_TYPE_TIMESTAMP;
+        }
+        if (PROCEDURE_JDBC_TYPE_VALUE_CLOB == jdbcType) {
+            return PROCEDURE_JDBC_TYPE_CLOB;
+        }
+        if (PROCEDURE_JDBC_TYPE_VALUE_CURSOR == jdbcType) {
+            return PROCEDURE_JDBC_TYPE_CURSOR;
+        }
+        return null;
+    }
 
     /**
      * 参数校验类型  1|不验证  2|表达式验证  3|正则验证

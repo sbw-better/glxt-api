@@ -386,7 +386,8 @@ public class ApiActuatorServiceImpl extends ServiceImpl<ApiActuatorMapper, ApiAc
     }
 
     private Object convertProcedureParamValue(ApiParam param, Object value) {
-        String jdbcType = param.getJdbcType() == null ? "" : param.getJdbcType().trim().toUpperCase(Locale.ROOT);
+        String jdbcType = getProcedureJdbcTypeName(param.getJdbcType());
+        isFalse(StringUtils.isEmpty(jdbcType), "参数" + param.getCode() + "的存储过程JDBC类型不支持，请核对！");
         if (PROCEDURE_JDBC_TYPE_VARCHAR.equals(jdbcType) || PROCEDURE_JDBC_TYPE_CLOB.equals(jdbcType)) {
             isFalse(!(value instanceof String), "参数" + param.getCode() + "应为字符串类型，请核对！");
             return value;

@@ -41,7 +41,7 @@
 
 ### 2.3 存储过程 JDBC 类型 `jdbcType`
 
-| 前端下拉值 | 入库和执行值 | 说明 |
+| 前端、数据库和接口值 | 运行时 JDBC 类型 | 说明 |
 | --- | --- | --- |
 | `1` | `VARCHAR` | 字符串 |
 | `2` | `INTEGER` | 整型 |
@@ -52,7 +52,7 @@
 | `7` | `CLOB` | 长文本字符串，支持 IN/OUT/INOUT，业务类型 `type=1` |
 | `8` | `CURSOR` | 游标结果集，一期仅支持 `OUT` 方向 |
 
-配置页下拉组件使用左列数字作为 value。保存接口可直接接收这个数字；后端仅在 `type=2` 的存储过程配置保存时转换为中间列字符串。配置查询、Excel 导入导出和执行阶段均使用中间列字符串。编辑已有配置时，前端按该表反向映射为下拉数字。
+配置页下拉组件使用左列数字作为 value。保存接口、配置查询、数据库和 Excel 导入导出均使用这个数字；后端仅在 `type=2` 的存储过程执行时按中间列类型绑定参数或读取输出。
 
 ## 3. 配置保存接口
 
@@ -94,7 +94,7 @@
 | `name` | string | 是 | 参数名称，用于页面展示 |
 | `code` | string | 是 | 参数编码，执行入参和返回结果使用该 key |
 | `direction` | number | 是 | `1=IN`、`2=OUT`、`3=INOUT` |
-| `jdbcType` | string / number | 是 | 前端下拉提交 `1` 至 `8` 时，保存接口会转换为 JDBC 字符串；查询、导出和执行配置仍返回字符串 |
+| `jdbcType` | number | 是 | `1` 至 `8` 的 JDBC 类型字典值；保存、查询、导入导出均为数字，执行时解析为 JDBC 类型 |
 | `orderNo` | number | 是 | 参数在存储过程签名中的位置，从 `1` 开始 |
 | `required` | number | IN/INOUT 必填 | `1=必填`、`0=非必填`；OUT 参数可不传 |
 | `defaultValue` | string | 否 | IN/INOUT 非必填参数默认值 |
@@ -126,7 +126,7 @@
       "name": "产品代码",
       "code": "fundCode",
       "direction": 1,
-      "jdbcType": "VARCHAR",
+      "jdbcType": 1,
       "orderNo": 1,
       "required": 0,
       "defaultValue": "",
@@ -137,7 +137,7 @@
       "name": "状态码",
       "code": "status",
       "direction": 2,
-      "jdbcType": "VARCHAR",
+      "jdbcType": 1,
       "orderNo": 2,
       "description": "0表示成功"
     },
@@ -145,14 +145,14 @@
       "name": "提示信息",
       "code": "message",
       "direction": 2,
-      "jdbcType": "VARCHAR",
+      "jdbcType": 1,
       "orderNo": 3
     },
     {
       "name": "结果游标",
       "code": "data",
       "direction": 2,
-      "jdbcType": "CURSOR",
+      "jdbcType": 8,
       "orderNo": 4
     }
   ]
@@ -224,10 +224,10 @@
   "type": 2,
   "procedureName": "PKG_FUND.QUERY_LIST",
   "apiParamList": [
-    {"code": "fundCode", "direction": 1, "jdbcType": "VARCHAR", "orderNo": 1},
-    {"code": "status", "direction": 2, "jdbcType": "VARCHAR", "orderNo": 2},
-    {"code": "message", "direction": 2, "jdbcType": "VARCHAR", "orderNo": 3},
-    {"code": "data", "direction": 2, "jdbcType": "CURSOR", "orderNo": 4}
+    {"code": "fundCode", "direction": 1, "jdbcType": 1, "orderNo": 1},
+    {"code": "status", "direction": 2, "jdbcType": 1, "orderNo": 2},
+    {"code": "message", "direction": 2, "jdbcType": 1, "orderNo": 3},
+    {"code": "data", "direction": 2, "jdbcType": 8, "orderNo": 4}
   ]
 }
 ```
@@ -390,7 +390,7 @@
 - 隐藏或禁用 SQL 查询专用字段：`selectParam`、`fromParam`、`whereParamFixed`、`whereParamChange`、`groupParam`、`orderParam`、`page`。
 - 参数表格展示：`name`、`code`、`direction`、`type`、`jdbcType`、`orderNo`、`description`。
 - 存储过程参数不设置或展示 `required`、`defaultValue`、`validateType`、`expression`、`error`。
-- `jdbcType=CURSOR` 时，`direction` 固定为 OUT。
+- `jdbcType=8`（CURSOR）时，`direction` 固定为 OUT。
 - 参数列表建议按 `orderNo` 升序展示。
 
 ### 7.2 执行/联调页
@@ -408,7 +408,7 @@
 2. 确认接口配置 `type=2`。
 3. 确认 `procedureName` 与数据库实际过程名一致。
 4. 确认 `apiParamList.orderNo` 与存储过程签名顺序完全一致。
-5. 确认 OUT 游标参数配置为 `direction=2`、`jdbcType=CURSOR`。
+5. 确认 OUT 游标参数配置为 `direction=2`、`jdbcType=8`。
 6. 确认执行请求只传 IN、INOUT 参数。
 7. 确认 token 已授权当前接口，且 IP 白名单允许当前调用方。
 
