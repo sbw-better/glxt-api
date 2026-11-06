@@ -55,7 +55,7 @@ public class ApiServiceImplProcedureJdbcTypeTest {
         dto.setProcedureName("PKG_EMP.QUERY_EMP");
         dto.setApiParamList(Arrays.asList(input, output));
 
-        assertEquals("{ call PKG_EMP.QUERY_EMP(? /* content:IN:CLOB */, ? /* data:OUT:CURSOR */) }",
+        assertEquals("{ call PKG_EMP.QUERY_EMP(content, data) }",
                 new ApiServiceImpl().preview(dto));
     }
 }

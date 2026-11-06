@@ -416,16 +416,7 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
                 builder.append(", ");
             }
             ApiParam param = apiParamList.get(i);
-            // 前端、数据库均使用 JDBC 类型字典值；预览时解析为可读的 JDBC 类型名称。
-            String jdbcType = getProcedureJdbcTypeName(param.getJdbcType());
-            builder.append("?")
-                    .append(" /* ")
-                    .append(param.getCode())
-                    .append(":")
-                    .append(procedureDirectionName(param.getDirection()))
-                    .append(":")
-                    .append(StringUtils.isEmpty(jdbcType) ? param.getJdbcType() : jdbcType)
-                    .append(" */");
+            builder.append(param.getCode());
         }
         builder.append(") }");
         return builder.toString();
