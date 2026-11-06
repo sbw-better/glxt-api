@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.sql.CallableStatement;
 import java.sql.Connection;
@@ -24,6 +25,7 @@ import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_VAL
 import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_PARAM_DIRECTION_IN;
 import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_PARAM_DIRECTION_OUT;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -137,6 +139,27 @@ public class DbModuleProcedureTest {
         verify(reader).close();
         verify(output).free();
         verify(callableStatement).close();
+    }
+
+    @Test
+    public void resolvesAllPersistedJdbcTypeValuesToSqlTypes() {
+        DbModule dbModule = new DbModule(jdbcTemplate, null, tenantService);
+
+        assertEquals(Types.VARCHAR, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 1));
+        assertEquals(Types.INTEGER, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 2));
+        assertEquals(Types.BIGINT, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 3));
+        assertEquals(Types.DECIMAL, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 4));
+        assertEquals(Types.DATE, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 5));
+        assertEquals(Types.TIMESTAMP, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 6));
+        assertEquals(Types.CLOB, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 7));
+        assertEquals(-10, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 8));
+
+        try {
+            ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 9);
+            fail("jdbcType=9 应被拒绝");
+        } catch (com.citics.glxtapi.web.exception.APIException expected) {
+            assertEquals("不支持的存储过程JDBC类型：9", expected.getMessage());
+        }
     }
 
     private ApiParam procedureParam(String code, Integer direction, Integer orderNo) {

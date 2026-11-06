@@ -58,6 +58,20 @@ public class ApiServiceImplProcedureValidationTest {
         ));
     }
 
+    @Test(expected = MybatisPlusException.class)
+    public void rejectsJdbcTypeOutsideTheDictionaryRange() {
+        validate(Arrays.asList(
+                procedureParam("id", PROCEDURE_PARAM_DIRECTION_IN, 9, FILED_TYPE_INT, 1)
+        ));
+    }
+
+    @Test(expected = MybatisPlusException.class)
+    public void rejectsCursorForInoutDirection() {
+        validate(Arrays.asList(
+                procedureParam("data", 3, 8, FILED_TYPE_LIST, 1)
+        ));
+    }
+
     @Test
     public void acceptsCursorListAndKeepsNumericJdbcTypeForPersistence() {
         ApiParam input = procedureParam("id", PROCEDURE_PARAM_DIRECTION_IN, 4, FILED_TYPE_INT, 1);
