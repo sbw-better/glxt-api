@@ -535,8 +535,7 @@
                     <th class="w-name">参数名称</th>
                     <th class="w-code">参数代码</th>
                     <th class="w-dir">参数方向</th>
-                    <th class="w-param-type">参数类型</th>
-                    <th class="w-type">JDBC类型</th>
+                    <th class="w-type">Oracle类型</th>
 
                     <th class="w-op">操作</th>
                   </tr>
@@ -555,22 +554,12 @@
                     </td>
                     <td>
                       <select>
-                        <option>浮点数</option>
-                        <option>字符串</option>
-                        <option>整数</option>
-                        <option>日期</option>
-                        <option>列表</option>
-                      </select>
-                    </td>
-                    <td>
-                      <select>
-                        <option>DECIMAL</option>
-                        <option>VARCHAR</option>
-                        <option>INTEGER</option>
-                        <option>BIGINT</option>
+                        <option>NUMBER</option>
+                        <option>VARCHAR2</option>
                         <option>DATE</option>
                         <option>TIMESTAMP</option>
                         <option>CLOB</option>
+                        <option>SYS_REFCURSOR</option>
                       </select>
                     </td>
 
@@ -589,22 +578,12 @@
                     </td>
                     <td>
                       <select>
-                        <option>浮点数</option>
-                        <option>字符串</option>
-                        <option>整数</option>
-                        <option>日期</option>
-                        <option>列表</option>
-                      </select>
-                    </td>
-                    <td>
-                      <select>
-                        <option>DECIMAL</option>
-                        <option>VARCHAR</option>
-                        <option>INTEGER</option>
-                        <option>BIGINT</option>
+                        <option>NUMBER</option>
+                        <option>VARCHAR2</option>
                         <option>DATE</option>
                         <option>TIMESTAMP</option>
                         <option>CLOB</option>
+                        <option>SYS_REFCURSOR</option>
                       </select>
                     </td>
 
@@ -623,22 +602,12 @@
                     </td>
                     <td>
                       <select>
-                        <option>字符串</option>
-                        <option>整数</option>
-                        <option>浮点数</option>
-                        <option>日期</option>
-                        <option>列表</option>
-                      </select>
-                    </td>
-                    <td>
-                      <select>
-                        <option>VARCHAR</option>
-                        <option>INTEGER</option>
-                        <option>BIGINT</option>
-                        <option>DECIMAL</option>
+                        <option>VARCHAR2</option>
+                        <option>NUMBER</option>
                         <option>DATE</option>
                         <option>TIMESTAMP</option>
                         <option>CLOB</option>
+                        <option>SYS_REFCURSOR</option>
                       </select>
                     </td>
 
@@ -657,22 +626,12 @@
                     </td>
                     <td>
                       <select>
-                        <option>字符串</option>
-                        <option>整数</option>
-                        <option>浮点数</option>
-                        <option>日期</option>
-                        <option>列表</option>
-                      </select>
-                    </td>
-                    <td>
-                      <select>
-                        <option>VARCHAR</option>
-                        <option>INTEGER</option>
-                        <option>BIGINT</option>
-                        <option>DECIMAL</option>
+                        <option>VARCHAR2</option>
+                        <option>NUMBER</option>
                         <option>DATE</option>
                         <option>TIMESTAMP</option>
                         <option>CLOB</option>
+                        <option>SYS_REFCURSOR</option>
                       </select>
                     </td>
 
@@ -688,17 +647,10 @@
                       </select>
                     </td>
                     <td>
-                      <select disabled>
-                        <option>列表</option>
-                      </select>
-                    </td>
-                    <td>
                       <select>
-                        <option>CURSOR</option>
-                        <option>VARCHAR</option>
-                        <option>INTEGER</option>
-                        <option>BIGINT</option>
-                        <option>DECIMAL</option>
+                        <option>SYS_REFCURSOR</option>
+                        <option>VARCHAR2</option>
+                        <option>NUMBER</option>
                         <option>DATE</option>
                         <option>TIMESTAMP</option>
                         <option>CLOB</option>
@@ -728,9 +680,9 @@
               <li>新增 procedureName，保存时必填。</li>
               <li>参数表保留 type；新增 direction、jdbcType、orderNo。</li>
               <li>每个参数都填写名称、编码、类型、方向、JDBC 类型和顺序；同一接口内编码不能重复。</li>
-              <li>CURSOR 只能配置为 OUT，且参数类型固定为“列表”。</li>
+              <li>SYS_REFCURSOR 只能配置为 OUT；游标结果由 Oracle 类型识别，不需要参数类型列。</li>
               <li>参数排序直接编辑 orderNo，值必须从 1 开始连续。</li>
-              <li>JDBC 类型下拉展示名称，保存请求、数据库和配置查询统一使用数值 1~8；执行时后端再解析类型。</li>
+              <li>Oracle 类型下拉展示名称，保存请求、数据库和配置查询统一使用数值 1~6；执行时后端映射 JDBC 类型。</li>
               <li>调用预览不提供手动按钮，按完整参数配置自动显示。</li>
             </ul>
           </div>
@@ -746,28 +698,27 @@
           </div>
 
           <div class="aside-card">
-            <div class="aside-title">参数类型</div>
+            <div class="aside-title">参数配置</div>
             <ul class="rule-list">
-              <li>参数类型用于说明业务数据类型；存储过程不配置必填、默认值和业务校验。</li>
+              <li>存储过程参数无需通用参数类型；也不配置必填、默认值和业务校验。</li>
               <li>OUT 标量参数用于说明返回值业务类型，应配置并展示。</li>
-              <li>OUT CURSOR 参数固定为列表，表示返回结果集。</li>
+              <li>OUT SYS_REFCURSOR 表示返回结果集，不依赖参数类型字段。</li>
               <li>字段值沿用原接口参数 type：字符串、整数、浮点数、日期、列表。</li>
-              <li>JDBC 类型用于入参转换和数据库绑定，参数类型用于业务展示。</li>
+              <li>Oracle 类型由后端映射为 JDBC 类型用于入参转换和数据库绑定。</li>
             </ul>
           </div>
 
           <div class="aside-card">
             <div class="aside-title">JDBC 类型</div>
             <ul class="rule-list">
-              <li>下拉展示类型名称，保存请求提交 1~8；后端以相同数值入库和返回。</li>
-              <li>VARCHAR：VARCHAR2、CHAR。</li>
-              <li>INTEGER/BIGINT/DECIMAL：Oracle NUMBER。</li>
+              <li>下拉展示 Oracle 类型名称，保存请求提交数值 1~6；后端以相同数值入库和返回。</li>
+              <li>NUMBER：统一映射为 JDBC DECIMAL 和 BigDecimal，支持整数和小数。</li>
+              <li>VARCHAR2：映射为 JDBC VARCHAR。</li>
               <li>DATE：yyyy-MM-dd 或 yyyy-MM-dd HH:mm:ss。</li>
               <li>TIMESTAMP：yyyy-MM-dd HH:mm:ss。</li>
-              <li>CLOB：长文本，支持 IN、OUT、INOUT，参数类型选择“字符串”。</li>
-              <li>CURSOR：Oracle SYS_REFCURSOR。</li>
-              <li>选择 CURSOR 时 direction 必须为 OUT。</li>
-              <li>direction 为 IN/INOUT 时，JDBC 类型下拉不展示 CURSOR。</li>
+              <li>CLOB：长文本，支持 IN、OUT、INOUT。</li>
+              <li>SYS_REFCURSOR：Oracle 游标结果集。</li>
+              <li>SYS_REFCURSOR 仅支持 OUT。</li>
             </ul>
           </div>
 
@@ -789,9 +740,9 @@
               <li>删除操作只保留行内删除。</li>
               <li>所有方向均不展示、配置必填、默认值和业务校验字段。</li>
               <li>IN/INOUT 保留 JDBC 类型转换；未传或 null 按 SQL NULL 绑定。</li>
-              <li>选择 CURSOR 时，方向自动设为 OUT 并禁用修改。</li>
-              <li>选择 CURSOR 时，参数类型自动设为“列表”并禁用修改；非 OUT 方向的 JDBC 下拉不展示 CURSOR。</li>
-              <li>如果已选 CURSOR 后改方向，需先清空或切换 JDBC 类型。</li>
+              <li>选择 SYS_REFCURSOR 时，方向自动设为 OUT 并禁用修改。</li>
+              <li>存储过程参数表不显示通用“参数类型”列；选择 SYS_REFCURSOR 时方向自动设为 OUT 并禁用修改。</li>
+              <li>若要修改游标参数方向，需先切换 Oracle 类型。</li>
             </ul>
           </div>
 
@@ -800,7 +751,7 @@
             <ul class="rule-list">
               <li>新增页不放“生成预览”按钮。</li>
               <li>procedureName 为空时显示待配置。</li>
-              <li>任一参数缺少名称、编码、类型、orderNo、direction、jdbcType 时显示待配置。</li>
+              <li>任一参数缺少名称、编码、orderNo、direction、jdbcType 时显示待配置；不检查通用 type。</li>
               <li>配置完整后按参数数量显示 `{ call ...(?, ?) }`。</li>
               <li>该预览只表示绑定结构，不校验数据库过程是否存在。</li>
             </ul>
@@ -813,8 +764,7 @@
               <tr><td>接口类型</td><td>type</td></tr>
               <tr><td>存储过程名称</td><td>procedureName</td></tr>
               <tr><td>参数方向</td><td>apiParamList[].direction</td></tr>
-              <tr><td>参数类型</td><td>apiParamList[].type</td></tr>
-              <tr><td>JDBC类型（1~8）</td><td>apiParamList[].jdbcType；数据库、接口返回和 Excel 均为数值字典值</td></tr>
+              <tr><td>Oracle类型（1~6）</td><td>apiParamList[].jdbcType；数据库 NUMBER(10)，接口返回和 Excel 均为数值字典值</td></tr>
               <tr><td>参数顺序</td><td>apiParamList[].orderNo</td></tr>
             </table>
           </div>
@@ -828,7 +778,7 @@
       const optionValues = {
         4: { IN: "1", OUT: "2", INOUT: "3" },
         5: { "字符串": "1", "整数": "2", "浮点数": "3", "日期": "4", "列表": "5" },
-        6: { VARCHAR: "1", INTEGER: "2", BIGINT: "3", DECIMAL: "4", DATE: "5", TIMESTAMP: "6", CLOB: "7", CURSOR: "8" }
+        6: { NUMBER: "1", VARCHAR2: "2", DATE: "3", TIMESTAMP: "4", CLOB: "5", SYS_REFCURSOR: "6" }
       };
       document.querySelectorAll("#procedure-param-list tr").forEach(function (row) {
         Object.keys(optionValues).forEach(function (column) {

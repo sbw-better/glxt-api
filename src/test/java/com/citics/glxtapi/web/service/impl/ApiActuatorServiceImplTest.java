@@ -43,7 +43,7 @@ import static com.citics.glxtapi.web.constants.Constants.FILED_CHECK_TYPE_NO;
 import static com.citics.glxtapi.web.constants.Constants.INTERFACE_TYPE_PROCEDURE;
 import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_VALUE_CLOB;
 import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_VALUE_CURSOR;
-import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_VALUE_VARCHAR;
+import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_VALUE_VARCHAR2;
 import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_PARAM_DIRECTION_IN;
 import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_PARAM_DIRECTION_OUT;
 import static com.citics.glxtapi.web.constants.Constants.WHETHER_NO;
@@ -312,6 +312,18 @@ public class ApiActuatorServiceImplTest {
         assertEquals("中文长文本", params.get("fundCode"));
     }
 
+    @Test
+    public void procedureNumberConvertsIntegersDecimalsAndLargeNumbersExactly() {
+        ApiParam number = procedureParam("amount", PROCEDURE_PARAM_DIRECTION_IN, 1, 1);
+        assertEquals(new java.math.BigDecimal("123"),
+                ReflectionTestUtils.invokeMethod(service, "convertProcedureParamValue", number, 123));
+        assertEquals(new java.math.BigDecimal("123.45"),
+                ReflectionTestUtils.invokeMethod(service, "convertProcedureParamValue", number, "123.45"));
+        assertEquals(new java.math.BigDecimal("123456789012345678901234567890"),
+                ReflectionTestUtils.invokeMethod(service, "convertProcedureParamValue", number,
+                        "123456789012345678901234567890"));
+    }
+
     private ApiInterfaceVO apiInterface(Integer page) {
         ApiInterfaceVO apiInterface = new ApiInterfaceVO();
         apiInterface.setId(1L);
@@ -329,8 +341,8 @@ public class ApiActuatorServiceImplTest {
         apiInterface.setType(INTERFACE_TYPE_PROCEDURE);
         apiInterface.setProcedureName("PKG.PROC");
         apiInterface.setApiParamList(Arrays.asList(
-                procedureParam("fundCode", PROCEDURE_PARAM_DIRECTION_IN, PROCEDURE_JDBC_TYPE_VALUE_VARCHAR, 1),
-                procedureParam("status", PROCEDURE_PARAM_DIRECTION_OUT, PROCEDURE_JDBC_TYPE_VALUE_VARCHAR, 2),
+                procedureParam("fundCode", PROCEDURE_PARAM_DIRECTION_IN, PROCEDURE_JDBC_TYPE_VALUE_VARCHAR2, 1),
+                procedureParam("status", PROCEDURE_PARAM_DIRECTION_OUT, PROCEDURE_JDBC_TYPE_VALUE_VARCHAR2, 2),
                 procedureParam("data", PROCEDURE_PARAM_DIRECTION_OUT, PROCEDURE_JDBC_TYPE_VALUE_CURSOR, 3)
         ));
         return apiInterface;

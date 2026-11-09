@@ -45,7 +45,7 @@ Content-Type: application/json
       "code": "pNum",
       "type": 3,
       "direction": 3,
-      "jdbcType": "DECIMAL",
+      "jdbcType": 1,
       "orderNo": 1,
       "required": 1,
       "defaultValue": null,
@@ -68,7 +68,7 @@ Content-Type: application/json
       "name": "输入输出数值",
       "code": "pNum",
       "direction": 3,
-      "jdbcType": "DECIMAL",
+      "jdbcType": 1,
       "orderNo": 1
     }
   ]

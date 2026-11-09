@@ -602,6 +602,11 @@ public class DbModule implements ModuleService {
         // CallableStatement按位置绑定参数，不能依赖参数名；ORDER_NO必须与存储过程签名顺序一致。
         orderedParams.sort(Comparator.comparing(x -> x.getOrderNo() == null ? Integer.MAX_VALUE : x.getOrderNo()));
         String callSql = buildProcedureCallSql(procedureName, orderedParams.size());
+        // 记录参数元信息便于排查配置问题；严禁记录实际入参值，避免敏感信息进入日志。
+        log.info("执行存储过程，procedureName={}, callSql={}, params={}", procedureName, callSql,
+                orderedParams.stream().map(param -> param.getCode() + ":"
+                        + param.getDirection() + ":" + getProcedureJdbcTypeName(param.getJdbcType()))
+                        .collect(java.util.stream.Collectors.joining(",")));
         if (saveSql) {
             // 先记录调用文本，保证过程执行失败时调用日志也能看到具体的{ call ... }。
             SqlContextHolder.clear();
@@ -720,20 +725,15 @@ public class DbModule implements ModuleService {
         if (PROCEDURE_JDBC_TYPE_CLOB.equals(type)) {
             return Types.CLOB;
         }
-        if (PROCEDURE_JDBC_TYPE_VARCHAR.equals(type)) {
+        if (PROCEDURE_JDBC_TYPE_VARCHAR2.equals(type)) {
             return Types.VARCHAR;
         }
-        if (PROCEDURE_JDBC_TYPE_INTEGER.equals(type)) {
-            return Types.INTEGER;
-        }
-        if (PROCEDURE_JDBC_TYPE_BIGINT.equals(type)) {
-            return Types.BIGINT;
-        }
-        if (PROCEDURE_JDBC_TYPE_DECIMAL.equals(type)) {
+        if (PROCEDURE_JDBC_TYPE_NUMBER.equals(type)) {
             return Types.DECIMAL;
         }
         if (PROCEDURE_JDBC_TYPE_DATE.equals(type)) {
-            return Types.DATE;
+            // Oracle DATE carries time to seconds; bind/read as TIMESTAMP to preserve it.
+            return Types.TIMESTAMP;
         }
         if (PROCEDURE_JDBC_TYPE_TIMESTAMP.equals(type)) {
             return Types.TIMESTAMP;

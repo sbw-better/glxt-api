@@ -50,7 +50,7 @@
 │ 过程参数                                                   │
 │ [新增参数]                                                   │
 │ ┌ 参数表格                                                ┐ │
-│ │ 顺序 参数名称 参数代码 方向 参数类型 JDBC类型 操作│ │
+│ │ 顺序 参数名称 参数代码 方向 Oracle类型 操作│ │
 │ └────────────────────────────────────────────────────────┘ │
 ├────────────────────────────────────────────────────────────┤
 │                                            [确定] [取消]    │
@@ -130,21 +130,10 @@
 | 参数名称 | `name` | 输入框 | 是 | 中文名称或业务名称 |
 | 参数代码 | `code` | 输入框 | 是 | 请求/返回 JSON 中使用的 key |
 | 参数方向 | `direction` | 下拉框 | 是 | `1=IN`，`2=OUT`，`3=INOUT` |
-| 参数类型 | `type` | 下拉框 | 建议必填 | IN/INOUT 表示入参业务类型；OUT 标量表示返回值业务类型；OUT CURSOR 固定为列表 |
-| JDBC类型 | `jdbcType` | 下拉框 | 是 | 见下方类型枚举 |
+| Oracle类型 | `jdbcType` | 下拉框 | 是 | 数值字典值，展示 NUMBER/VARCHAR2/DATE/TIMESTAMP/CLOB/SYS_REFCURSOR |
 | 操作 | - | 编辑/删除按钮 | - | 行操作 |
 
-### 6.2 参数类型枚举
-
-| 展示值 | 提交值 | 含义 |
-|---|---:|---|
-| 字符串 | `1` | 文本入参 |
-| 整型 | `2` | 整数入参 |
-| 浮点数 | `3` | 数值型入参，沿用原 `FILED_TYPE_FLOAT` |
-| 日期 | `4` | 日期入参 |
-| 列表 | `5` | 数组/列表入参 |
-
-### 6.3 参数方向枚举
+### 6.2 参数方向枚举
 
 | 展示值 | 提交值 | 含义 | 调用方是否传入 |
 |---|---:|---|---|
@@ -155,7 +144,7 @@
 交互规则：
 
 - 所有方向均不展示、不配置、不提交 `required/defaultValue/validateType/expression/error`。
-- 选择 `OUT` 后，参数类型仍展示；标量 OUT 用于说明返回值类型，CURSOR 固定为列表。
+- 存储过程参数不展示通用 `type`；Oracle 类型和游标结果处理均由 `jdbcType` 确定。
 - IN/INOUT 仅保留 JDBC 类型转换；未传或显式 null 按 SQL NULL 绑定，不自动使用过程声明的默认值。
 - 请求体 `params` 中只允许出现 `IN/INOUT` 参数。
 - `OUT` 参数由后端从 `CallableStatement` 读取并返回。
@@ -164,19 +153,17 @@
 
 | 展示值 | 数字字典值 | 适用 Oracle 类型 |
 |---|---|---|
-| VARCHAR | `1` | `VARCHAR2`、`CHAR` |
-| INTEGER | `2` | `NUMBER(10)` 等 |
-| BIGINT | `3` | 大整数 `NUMBER` |
-| DECIMAL | `4` | `NUMBER(p,s)` |
-| DATE | `5` | `DATE` |
-| TIMESTAMP | `6` | `TIMESTAMP` |
-| `CLOB` | `7` | 支持 IN/OUT/INOUT，业务类型 `type=1`；输入和输出均为 JSON 字符串 |
-| CURSOR | `8` | `SYS_REFCURSOR` |
+| NUMBER | `1` | JDBC DECIMAL/BigDecimal，支持整数和小数 |
+| VARCHAR2 | `2` | JDBC VARCHAR |
+| DATE | `3` | JDBC TIMESTAMP，保留 Oracle DATE 的时分秒 |
+| TIMESTAMP | `4` | JDBC TIMESTAMP |
+| CLOB | `5` | 支持 IN/OUT/INOUT，输入和输出均为 JSON 字符串 |
+| SYS_REFCURSOR | `6` | 游标结果集 |
 
 交互规则：
 
-- `CURSOR` 一期只允许 `direction=OUT`。
-- 如果用户选择 `jdbcType=8`（CURSOR），自动将方向设为 `OUT`，并禁用方向修改，或在保存前提示。
+- `SYS_REFCURSOR` 只允许 `direction=OUT`。
+- 如果用户选择 `jdbcType=6`（SYS_REFCURSOR），自动将方向设为 `OUT` 并禁用方向修改。
 - `DATE` 支持输入格式：`yyyy-MM-dd` 或 `yyyy-MM-dd HH:mm:ss`。
 - `TIMESTAMP` 支持输入格式：`yyyy-MM-dd HH:mm:ss`。
 
@@ -198,9 +185,9 @@ PROCEDURE QUERY_FUND(
 
 | orderNo | code | direction | jdbcType |
 |---:|---|---|---|
-| 1 | fundCode | IN | 1（VARCHAR） |
-| 2 | status | OUT | 1（VARCHAR） |
-| 3 | data | OUT | 8（CURSOR） |
+| 1 | fundCode | IN | 2（VARCHAR2） |
+| 2 | status | OUT | 2（VARCHAR2） |
+| 3 | data | OUT | 6（SYS_REFCURSOR） |
 
 后端实际调用：
 
@@ -237,19 +224,19 @@ POST /api/interface/preview
     {
       "code": "fundCode",
       "direction": 1,
-      "jdbcType": "VARCHAR",
+      "jdbcType": 2,
       "orderNo": 1
     },
     {
       "code": "status",
       "direction": 2,
-      "jdbcType": "VARCHAR",
+      "jdbcType": 2,
       "orderNo": 2
     },
     {
       "code": "data",
       "direction": 2,
-      "jdbcType": "CURSOR",
+      "jdbcType": 6,
       "orderNo": 3
     }
   ]
@@ -259,7 +246,7 @@ POST /api/interface/preview
 返回示例：
 
 ```text
-{ call PKG_FUND_QUERY.QUERY_FUND(? /* fundCode:IN:VARCHAR */, ? /* status:OUT:VARCHAR */, ? /* data:OUT:CURSOR */) }
+{ call PKG_FUND_QUERY.QUERY_FUND(fundCode, status, data) }
 ```
 
 页面展示建议：
@@ -285,21 +272,21 @@ POST /api/interface/preview
       "name": "基金代码",
       "code": "fundCode",
       "direction": 1,
-      "jdbcType": "VARCHAR",
+      "jdbcType": 2,
       "orderNo": 1
     },
     {
       "name": "执行状态",
       "code": "status",
       "direction": 2,
-      "jdbcType": "VARCHAR",
+      "jdbcType": 2,
       "orderNo": 2
     },
     {
       "name": "结果游标",
       "code": "data",
       "direction": 2,
-      "jdbcType": "CURSOR",
+      "jdbcType": 6,
       "orderNo": 3
     }
   ]
@@ -381,11 +368,10 @@ POST /api/interface/preview
 - 存储过程类型必须填写 `procedureName`。
 - 存储过程类型必须选择 `connectionId`。
 - 至少配置一个参数；如果无参数过程允许为空，则需要产品确认。
-- 每个参数建议填写 `name/code/type/direction/jdbcType/orderNo`。
+- 每个存储过程参数填写 `name/code/direction/jdbcType/orderNo`；不要求通用 `type`。
 - `orderNo` 不允许重复。
-- `CURSOR` 只能为 `OUT`。
+- `SYS_REFCURSOR` 只能为 `OUT`，游标结果不依赖通用 `type` 字段。
 - `IN/INOUT` 使用 `type` 表示业务类型，不配置必填、默认值和业务校验。
-- `OUT` 标量参数用 `type` 表示返回值业务类型；`OUT CURSOR` 的 `type` 固定为列表。
 - 后端存储过程分支忽略旧配置中的上述五个字段；SQL 接口行为不变。
 - 请求 demo 和执行请求中不能出现 `OUT` 参数。
 
@@ -396,7 +382,7 @@ POST /api/interface/preview
   - 从存储过程切到 SQL 查询：提示“切换后存储过程配置项将不参与保存校验，请确认”。
 - 参数表格不提供上移、下移、批量删除；排序直接维护 `orderNo`。
 - `procedureName` 下方展示示例：`PKG_NAME.PROC_NAME`。
-- `CURSOR` 参数行使用标签突出展示，方便用户识别结果集参数。
+- `SYS_REFCURSOR` 参数行使用标签突出展示，方便用户识别结果集参数。
 - 调用预览区域固定在参数表格上方，参数配置完整后自动刷新；未配置完整时提示“请先完善过程参数”。
 
 ## 14. 与现有 SQL 新增页的差异
@@ -416,7 +402,7 @@ POST /api/interface/preview
 1. 在接口类型下拉框增加 `存储过程(type=2)`。
 2. 根据 `type` 控制 SQL 配置区和存储过程配置区显示。
 3. 新增 `procedureName` 表单字段。
-4. 参数表格保留原 `type` 参数类型列，并扩展 `direction/jdbcType/orderNo`。
+4. 存储过程参数表格不显示原 `type` 参数类型列；SQL 参数配置继续保留 `type`。
 5. 增加过程参数的前端校验。
 6. 调整 demo 生成展示：过滤 `OUT` 参数。
 7. 调整执行结果展示：支持 `outParams/cursors/resultCount`。

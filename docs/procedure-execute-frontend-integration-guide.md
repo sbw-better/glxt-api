@@ -21,7 +21,7 @@
 | 字段 | 前端字段 | 说明 |
 | --- | --- | --- |
 | `DIRECTION` | `direction` | 参数方向：`1=IN`、`2=OUT`、`3=INOUT` |
-| `JDBC_TYPE` | `jdbcType` | JDBC 类型字典值；数据库、接口、导入导出均保存数字，执行时再解析为 JDBC 绑定类型 |
+| `JDBC_TYPE` | `jdbcType` | Oracle 类型数字字典值；数据库列为 NUMBER(10)，执行时映射为 JDBC 类型 |
 | `ORDER_NO` | `orderNo` | 位置绑定顺序，从 `1` 开始 |
 
 `orderNo` 决定 `{ call PROC(?, ?, ...) }` 中占位符的位置，不按参数 `code` 绑定。同一个接口的 `orderNo` 必须唯一，且应与 Oracle 过程签名的顺序一致。
@@ -31,7 +31,7 @@
 当 `type=2` 时，展示 `procedureName`，以及参数的：
 
 ```text
-orderNo / name / code / direction / type / jdbcType / description
+orderNo / name / code / direction / jdbcType / description
 ```
 
 存储过程不设置也不展示以下 SQL 参数字段：
@@ -48,34 +48,31 @@ required / defaultValue / validateType / expression / error
 
 SQL 配置字段 `selectParam`、`fromParam`、`whereParamFixed`、`whereParamChange`、`groupParam`、`orderParam` 等在存储过程页隐藏；建议 `page` 固定为 `0`。
 
-## 4. 参数类型和 JDBC 类型
+## 4. Oracle 类型字典
 
-`type` 是业务展示类型，`jdbcType` 是数据库调用时的绑定类型，两者不能混用。
+存储过程参数不需要通用 `type` 字段。`jdbcType` 数值字典直接表示存储过程定义中的 Oracle 类型，后端负责转换为 JDBC 类型。
 
-| Oracle 常见类型 | `type` 建议 | `jdbcType` 字典值 | 运行时 JDBC 类型 |
-| --- | ---: | --- | --- |
-| `VARCHAR2`、`CHAR` | `1` 字符串 | `1` | `VARCHAR`；JSON 请求和返回均为字符串 |
-| `NUMBER` 整数 | `2` 整型 | `2`、`3` 或 `4` | `INTEGER`、`BIGINT` 或 `DECIMAL`；未明确精度时优先 `4` |
-| `NUMBER(p,s)` | `3` 浮点数 | `4` | `DECIMAL`；JSON 可传数值或数字字符串 |
-| `DATE` | `4` 日期 | `5` | `DATE`；输入格式为 `yyyy-MM-dd` 或 `yyyy-MM-dd HH:mm:ss` |
-| `TIMESTAMP` | `4` 日期 | `6` | `TIMESTAMP`；输入格式为 `yyyy-MM-dd HH:mm:ss` |
-| `CLOB` | `1` 字符串 | `7` | `CLOB`；支持 IN、OUT、INOUT，JSON 中始终是字符串 |
-| `SYS_REFCURSOR` | `5` 列表 | `8` | `CURSOR`；仅支持 OUT，返回到 `cursors` |
+| Oracle 类型 | `jdbcType` 字典值 | 运行时处理 |
+| --- | ---: | --- |
+| `NUMBER` | `1` | JDBC DECIMAL，入参和 OUT 数值统一使用 BigDecimal |
+| `VARCHAR2` | `2` | JDBC VARCHAR；JSON 请求和返回均为字符串 |
+| `DATE` | `3` | JDBC TIMESTAMP，支持 `yyyy-MM-dd` 或 `yyyy-MM-dd HH:mm:ss` 并保留时分秒 |
+| `TIMESTAMP` | `4` | JDBC TIMESTAMP，输入格式 `yyyy-MM-dd HH:mm:ss` |
+| `CLOB` | `5` | JDBC CLOB；支持 IN、OUT、INOUT，JSON 中始终是字符串 |
+| `SYS_REFCURSOR` | `6` | Oracle 游标；仅支持 OUT，结果放入 `cursors` |
 
 ### 4.1 JDBC 类型下拉值
 
 前端下拉、保存请求、配置查询、数据库和 Excel 导入导出统一使用左列数字。执行存储过程时，后端才按右列类型绑定参数或读取输出。
 
-| 下拉 value | `jdbcType` 字符串 |
+| 下拉 value | Oracle 类型名称 |
 | ---: | --- |
-| `1` | `VARCHAR` |
-| `2` | `INTEGER` |
-| `3` | `BIGINT` |
-| `4` | `DECIMAL` |
-| `5` | `DATE` |
-| `6` | `TIMESTAMP` |
-| `7` | `CLOB` |
-| `8` | `CURSOR` |
+| `1` | `NUMBER` |
+| `2` | `VARCHAR2` |
+| `3` | `DATE` |
+| `4` | `TIMESTAMP` |
+| `5` | `CLOB` |
+| `6` | `SYS_REFCURSOR` |
 
 保存新配置时可以提交：
 
@@ -89,9 +86,9 @@ SQL 配置字段 `selectParam`、`fromParam`、`whereParamFixed`、`whereParamCh
 { "jdbcType": 4 }
 ```
 
-编辑已有配置时，接口直接返回数字。Excel 导入文件中的“存储过程 JDBC 类型”列填 `1` 至 `8` 的字典值，例如 `4`（DECIMAL）或 `7`（CLOB）。
+编辑已有配置时，接口直接返回数字。Excel 共用模板继续保留 SQL 所需的“参数类型”列；存储过程行可留空，导入时忽略该列。Oracle 类型列填写 `1` 至 `6`，例如 `1`（NUMBER）或 `5`（CLOB）。
 
-`CURSOR` 被选中时，前端应自动将 `direction` 设为 `OUT` 并禁用方向修改，同时将 `type` 设为列表。
+`SYS_REFCURSOR` 被选中时，前端应自动将 `direction` 设为 `OUT` 并禁用方向修改；存储过程参数表不显示通用 `type` 列。
 
 ## 5. 保存与预览
 
@@ -112,14 +109,14 @@ POST /api/interface/save
   "page": 0,
   "procedureName": "PKG_EMP.QUERY_EMP",
   "apiParamList": [
-    { "name": "部门 ID", "code": "p_dept_id", "type": 2, "direction": 1, "jdbcType": 4, "orderNo": 1 },
-    { "name": "状态码", "code": "p_status", "type": 1, "direction": 2, "jdbcType": 1, "orderNo": 2 },
-    { "name": "员工列表", "code": "p_data", "type": 5, "direction": 2, "jdbcType": 8, "orderNo": 3 }
+    { "name": "部门 ID", "code": "p_dept_id", "direction": 1, "jdbcType": 1, "orderNo": 1 },
+    { "name": "状态码", "code": "p_status", "direction": 2, "jdbcType": 2, "orderNo": 2 },
+    { "name": "员工列表", "code": "p_data", "direction": 2, "jdbcType": 6, "orderNo": 3 }
   ]
 }
 ```
 
-保存时校验 `procedureName`、`connectionId`、参数的 `name`、`code`、`type`、`direction`、`jdbcType`、`orderNo`；参数 `code` 不能重复，`orderNo` 必须从 `1` 开始连续编号，`CURSOR` 只能配置为 OUT 且业务参数类型必须为列表。
+保存时校验 `procedureName`、`connectionId`、参数的 `name`、`code`、`direction`、`jdbcType`、`orderNo`；参数 `code` 不能重复，`orderNo` 必须从 `1` 开始连续编号，`SYS_REFCURSOR` 只能配置为 OUT。
 
 ### 5.2 调用预览
 
@@ -135,13 +132,13 @@ POST /api/interface/preview
   "procedureName": "PKG_EMP.QUERY_EMP",
   "apiParamList": [
     { "code": "p_dept_id", "direction": 1, "jdbcType": 4, "orderNo": 1 },
-    { "code": "p_data", "direction": 2, "jdbcType": 8, "orderNo": 2 }
+    { "code": "p_data", "direction": 2, "jdbcType": 6, "orderNo": 2 }
   ]
 }
 ```
 
 ```text
-{ call PKG_EMP.QUERY_EMP(? /* p_dept_id:IN:DECIMAL */, ? /* p_data:OUT:CURSOR */) }
+{ call PKG_EMP.QUERY_EMP(p_dept_id, p_data) }
 ```
 
 预览只反映绑定结构，不校验数据库中过程是否存在。
@@ -171,7 +168,7 @@ POST /api/actuator/execute
 - `params` 只能传已配置的 IN、INOUT 参数；传 OUT 或未知参数会报错。
 - OUT 参数不渲染输入框。
 - IN、INOUT 参数可以省略或传 `null`；后端按其 JDBC 类型绑定 SQL `NULL`。
-- 非空 IN、INOUT 参数会按 JDBC 类型转换：`INTEGER`、`BIGINT`、`DECIMAL` 转数值，`DATE`、`TIMESTAMP` 转日期时间，`VARCHAR`、`CLOB` 必须是字符串。
+- 非空 IN、INOUT 参数按 Oracle 类型转换：`NUMBER` 转为精确 `BigDecimal`，`DATE`、`TIMESTAMP` 转日期时间，`VARCHAR2`、`CLOB` 必须是字符串。
 - `CLOB` 的长文本通过字符流绑定；前端无需处理数据库 CLOB 对象。
 
 ## 7. 返回结构与页面展示
@@ -224,7 +221,7 @@ POST /api/actuator/execute
 ## 10. 联调清单
 
 1. 保存带 IN、OUT、INOUT 的过程，确认数字下拉值以相同数字写入数据库并由查询接口返回。
-2. 使用 `NUMBER` + `DECIMAL`、`VARCHAR2` + `VARCHAR`、`DATE` + `DATE` 联调。
+2. 使用 `NUMBER`、`VARCHAR2`、`DATE` 类型联调。
 3. 验证 OUT `SYS_REFCURSOR` 返回到 `cursors`。
 4. 验证 OUT/INOUT `CLOB` 返回普通字符串，及 IN `CLOB` 的长文本传入。
 5. 验证未传、显式 `null` 的 IN/INOUT 参数可调用并绑定 SQL `NULL`。

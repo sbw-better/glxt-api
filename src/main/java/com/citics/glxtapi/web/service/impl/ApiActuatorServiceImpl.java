@@ -388,25 +388,11 @@ public class ApiActuatorServiceImpl extends ServiceImpl<ApiActuatorMapper, ApiAc
     private Object convertProcedureParamValue(ApiParam param, Object value) {
         String jdbcType = getProcedureJdbcTypeName(param.getJdbcType());
         isFalse(StringUtils.isEmpty(jdbcType), "参数" + param.getCode() + "的存储过程JDBC类型不支持，请核对！");
-        if (PROCEDURE_JDBC_TYPE_VARCHAR.equals(jdbcType) || PROCEDURE_JDBC_TYPE_CLOB.equals(jdbcType)) {
+        if (PROCEDURE_JDBC_TYPE_VARCHAR2.equals(jdbcType) || PROCEDURE_JDBC_TYPE_CLOB.equals(jdbcType)) {
             isFalse(!(value instanceof String), "参数" + param.getCode() + "应为字符串类型，请核对！");
             return value;
         }
-        if (PROCEDURE_JDBC_TYPE_INTEGER.equals(jdbcType)) {
-            try {
-                return Integer.valueOf(String.valueOf(value));
-            } catch (Exception e) {
-                throw new IllegalArgumentException("参数" + param.getCode() + "应为整型，请核对！");
-            }
-        }
-        if (PROCEDURE_JDBC_TYPE_BIGINT.equals(jdbcType)) {
-            try {
-                return Long.valueOf(String.valueOf(value));
-            } catch (Exception e) {
-                throw new IllegalArgumentException("参数" + param.getCode() + "应为长整型，请核对！");
-            }
-        }
-        if (PROCEDURE_JDBC_TYPE_DECIMAL.equals(jdbcType)) {
+        if (PROCEDURE_JDBC_TYPE_NUMBER.equals(jdbcType)) {
             try {
                 return new BigDecimal(String.valueOf(value));
             } catch (Exception e) {
@@ -417,7 +403,7 @@ public class ApiActuatorServiceImpl extends ServiceImpl<ApiActuatorMapper, ApiAc
             isFalse(!(value instanceof String), "参数" + param.getCode() + "应为日期型(yyyy-MM-dd或yyyy-MM-dd HH:mm:ss)，请核对！");
             String valueStr = (String) value;
             if (Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$").matcher(valueStr).find()) {
-                return java.sql.Date.valueOf(valueStr);
+                return java.sql.Timestamp.valueOf(valueStr + " 00:00:00");
             }
             if (Pattern.compile("^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$").matcher(valueStr).find()) {
                 return java.sql.Timestamp.valueOf(valueStr);

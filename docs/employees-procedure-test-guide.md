@@ -80,14 +80,14 @@ Oracle `NUMBER` 推荐配置为：
 
 ```json
 {
-  "jdbcType": "DECIMAL",
+  "jdbcType": 1,
   "type": 3
 }
 ```
 
 说明：
 
-- `jdbcType=DECIMAL` 用于 `CallableStatement` 注册和绑定。
+- `jdbcType=1` 表示 Oracle `NUMBER`，后端使用 `BigDecimal` 和 JDBC `DECIMAL` 绑定。
 - `type=3` 用于前端 demo 展示和数字语义表达。
 
 ### 5.2 VARCHAR2 参数
@@ -96,7 +96,7 @@ Oracle `VARCHAR2` 配置为：
 
 ```json
 {
-  "jdbcType": "VARCHAR",
+  "jdbcType": 2,
   "type": 1
 }
 ```
@@ -108,7 +108,7 @@ Oracle `SYS_REFCURSOR` 配置为：
 ```json
 {
   "direction": 2,
-  "jdbcType": "CURSOR"
+  "jdbcType": 6
 }
 ```
 

@@ -155,42 +155,32 @@ public class Constants {
     /**
      * 存储过程JDBC类型
      */
-    public static String PROCEDURE_JDBC_TYPE_VARCHAR = "VARCHAR";
-    public static String PROCEDURE_JDBC_TYPE_INTEGER = "INTEGER";
-    public static String PROCEDURE_JDBC_TYPE_BIGINT = "BIGINT";
-    public static String PROCEDURE_JDBC_TYPE_DECIMAL = "DECIMAL";
+    public static String PROCEDURE_JDBC_TYPE_NUMBER = "NUMBER";
+    public static String PROCEDURE_JDBC_TYPE_VARCHAR2 = "VARCHAR2";
     public static String PROCEDURE_JDBC_TYPE_DATE = "DATE";
     public static String PROCEDURE_JDBC_TYPE_TIMESTAMP = "TIMESTAMP";
     public static String PROCEDURE_JDBC_TYPE_CLOB = "CLOB";
-    public static String PROCEDURE_JDBC_TYPE_CURSOR = "CURSOR";
+    public static String PROCEDURE_JDBC_TYPE_CURSOR = "SYS_REFCURSOR";
 
     /**
      * 存储过程 JDBC 类型字典值。前端、数据库和 Excel 均使用数字；执行层再解析为 JDBC 类型名称。
      */
-    public static int PROCEDURE_JDBC_TYPE_VALUE_VARCHAR = 1;
-    public static int PROCEDURE_JDBC_TYPE_VALUE_INTEGER = 2;
-    public static int PROCEDURE_JDBC_TYPE_VALUE_BIGINT = 3;
-    public static int PROCEDURE_JDBC_TYPE_VALUE_DECIMAL = 4;
-    public static int PROCEDURE_JDBC_TYPE_VALUE_DATE = 5;
-    public static int PROCEDURE_JDBC_TYPE_VALUE_TIMESTAMP = 6;
-    public static int PROCEDURE_JDBC_TYPE_VALUE_CLOB = 7;
-    public static int PROCEDURE_JDBC_TYPE_VALUE_CURSOR = 8;
+    public static int PROCEDURE_JDBC_TYPE_VALUE_NUMBER = 1;
+    public static int PROCEDURE_JDBC_TYPE_VALUE_VARCHAR2 = 2;
+    public static int PROCEDURE_JDBC_TYPE_VALUE_DATE = 3;
+    public static int PROCEDURE_JDBC_TYPE_VALUE_TIMESTAMP = 4;
+    public static int PROCEDURE_JDBC_TYPE_VALUE_CLOB = 5;
+    public static int PROCEDURE_JDBC_TYPE_VALUE_CURSOR = 6;
 
     public static String getProcedureJdbcTypeName(Integer jdbcType) {
         if (jdbcType == null) {
             return null;
         }
-        if (PROCEDURE_JDBC_TYPE_VALUE_VARCHAR == jdbcType) {
-            return PROCEDURE_JDBC_TYPE_VARCHAR;
+        if (PROCEDURE_JDBC_TYPE_VALUE_NUMBER == jdbcType) {
+            return PROCEDURE_JDBC_TYPE_NUMBER;
         }
-        if (PROCEDURE_JDBC_TYPE_VALUE_INTEGER == jdbcType) {
-            return PROCEDURE_JDBC_TYPE_INTEGER;
-        }
-        if (PROCEDURE_JDBC_TYPE_VALUE_BIGINT == jdbcType) {
-            return PROCEDURE_JDBC_TYPE_BIGINT;
-        }
-        if (PROCEDURE_JDBC_TYPE_VALUE_DECIMAL == jdbcType) {
-            return PROCEDURE_JDBC_TYPE_DECIMAL;
+        if (PROCEDURE_JDBC_TYPE_VALUE_VARCHAR2 == jdbcType) {
+            return PROCEDURE_JDBC_TYPE_VARCHAR2;
         }
         if (PROCEDURE_JDBC_TYPE_VALUE_DATE == jdbcType) {
             return PROCEDURE_JDBC_TYPE_DATE;

@@ -46,7 +46,7 @@ Content-Type: application/json
       "code": "empId",
       "type": 2,
       "direction": 1,
-      "jdbcType": "DECIMAL",
+      "jdbcType": 1,
       "orderNo": 1,
       "required": 1,
       "validateType": 1
@@ -55,35 +55,35 @@ Content-Type: application/json
       "name": "员工姓名",
       "code": "empName",
       "direction": 2,
-      "jdbcType": "VARCHAR",
+      "jdbcType": 2,
       "orderNo": 2
     },
     {
       "name": "薪资",
       "code": "salary",
       "direction": 2,
-      "jdbcType": "DECIMAL",
+      "jdbcType": 1,
       "orderNo": 3
     },
     {
       "name": "部门ID",
       "code": "deptId",
       "direction": 2,
-      "jdbcType": "DECIMAL",
+      "jdbcType": 1,
       "orderNo": 4
     },
     {
       "name": "状态码",
       "code": "status",
       "direction": 2,
-      "jdbcType": "VARCHAR",
+      "jdbcType": 2,
       "orderNo": 5
     },
     {
       "name": "状态说明",
       "code": "message",
       "direction": 2,
-      "jdbcType": "VARCHAR",
+      "jdbcType": 2,
       "orderNo": 6
     }
   ]
@@ -98,12 +98,12 @@ Content-Type: application/json
   "type": 2,
   "procedureName": "proc_emp_get",
   "apiParamList": [
-    {"code": "empId", "direction": 1, "jdbcType": "DECIMAL", "orderNo": 1},
-    {"code": "empName", "direction": 2, "jdbcType": "VARCHAR", "orderNo": 2},
-    {"code": "salary", "direction": 2, "jdbcType": "DECIMAL", "orderNo": 3},
-    {"code": "deptId", "direction": 2, "jdbcType": "DECIMAL", "orderNo": 4},
-    {"code": "status", "direction": 2, "jdbcType": "VARCHAR", "orderNo": 5},
-    {"code": "message", "direction": 2, "jdbcType": "VARCHAR", "orderNo": 6}
+    {"code": "empId", "direction": 1, "jdbcType": 1, "orderNo": 1},
+    {"code": "empName", "direction": 2, "jdbcType": 2, "orderNo": 2},
+    {"code": "salary", "direction": 2, "jdbcType": 1, "orderNo": 3},
+    {"code": "deptId", "direction": 2, "jdbcType": 1, "orderNo": 4},
+    {"code": "status", "direction": 2, "jdbcType": 2, "orderNo": 5},
+    {"code": "message", "direction": 2, "jdbcType": 2, "orderNo": 6}
   ]
 }
 
@@ -175,7 +175,7 @@ Content-Type: application/json
       "code": "salary",
       "type": 3,
       "direction": 3,
-      "jdbcType": "DECIMAL",
+      "jdbcType": 1,
       "orderNo": 1,
       "required": 1,
       "validateType": 1
@@ -221,7 +221,7 @@ Content-Type: application/json
       "code": "deptId",
       "type": 3,
       "direction": 1,
-      "jdbcType": "DECIMAL",
+      "jdbcType": 1,
       "orderNo": 1,
       "required": 0,
       "defaultValue": null,
@@ -232,7 +232,7 @@ Content-Type: application/json
       "code": "minSalary",
       "type": 3,
       "direction": 1,
-      "jdbcType": "DECIMAL",
+      "jdbcType": 1,
       "orderNo": 2,
       "required": 0,
       "defaultValue": null,
@@ -242,21 +242,21 @@ Content-Type: application/json
       "name": "状态码",
       "code": "status",
       "direction": 2,
-      "jdbcType": "VARCHAR",
+      "jdbcType": 2,
       "orderNo": 3
     },
     {
       "name": "状态说明",
       "code": "message",
       "direction": 2,
-      "jdbcType": "VARCHAR",
+      "jdbcType": 2,
       "orderNo": 4
     },
     {
       "name": "员工列表",
       "code": "data",
       "direction": 2,
-      "jdbcType": "CURSOR",
+      "jdbcType": 6,
       "orderNo": 5
     }
   ]
@@ -362,12 +362,12 @@ Content-Type: application/json
   "page": 0,
   "procedureName": "proc_emp_insert",
   "apiParamList": [
-    {"name": "员工ID", "code": "empId", "type": 2, "direction": 1, "jdbcType": "DECIMAL", "orderNo": 1, "required": 1, "validateType": 1},
-    {"name": "员工姓名", "code": "empName", "type": 1, "direction": 1, "jdbcType": "VARCHAR", "orderNo": 2, "required": 1, "validateType": 1},
-    {"name": "薪资", "code": "salary", "type": 3, "direction": 1, "jdbcType": "DECIMAL", "orderNo": 3, "required": 1, "validateType": 1},
-    {"name": "部门ID", "code": "deptId", "type": 2, "direction": 1, "jdbcType": "DECIMAL", "orderNo": 4, "required": 1, "validateType": 1},
-    {"name": "状态码", "code": "status", "direction": 2, "jdbcType": "VARCHAR", "orderNo": 5},
-    {"name": "状态说明", "code": "message", "direction": 2, "jdbcType": "VARCHAR", "orderNo": 6}
+    {"name": "员工ID", "code": "empId", "type": 2, "direction": 1, "jdbcType": 1, "orderNo": 1, "required": 1, "validateType": 1},
+    {"name": "员工姓名", "code": "empName", "type": 1, "direction": 1, "jdbcType": 2, "orderNo": 2, "required": 1, "validateType": 1},
+    {"name": "薪资", "code": "salary", "type": 3, "direction": 1, "jdbcType": 1, "orderNo": 3, "required": 1, "validateType": 1},
+    {"name": "部门ID", "code": "deptId", "type": 2, "direction": 1, "jdbcType": 1, "orderNo": 4, "required": 1, "validateType": 1},
+    {"name": "状态码", "code": "status", "direction": 2, "jdbcType": 2, "orderNo": 5},
+    {"name": "状态说明", "code": "message", "direction": 2, "jdbcType": 2, "orderNo": 6}
   ]
 }
 
@@ -446,11 +446,11 @@ Content-Type: application/json
   "page": 0,
   "procedureName": "proc_emp_raise_salary",
   "apiParamList": [
-    {"name": "部门ID", "code": "deptId", "type": 2, "direction": 1, "jdbcType": "DECIMAL", "orderNo": 1, "required": 1, "validateType": 1},
-    {"name": "涨薪比例", "code": "raiseRate", "type": 3, "direction": 1, "jdbcType": "DECIMAL", "orderNo": 2, "required": 1, "validateType": 1},
-    {"name": "影响行数", "code": "rows", "direction": 2, "jdbcType": "DECIMAL", "orderNo": 3},
-    {"name": "状态码", "code": "status", "direction": 2, "jdbcType": "VARCHAR", "orderNo": 4},
-    {"name": "状态说明", "code": "message", "direction": 2, "jdbcType": "VARCHAR", "orderNo": 5}
+    {"name": "部门ID", "code": "deptId", "type": 2, "direction": 1, "jdbcType": 1, "orderNo": 1, "required": 1, "validateType": 1},
+    {"name": "涨薪比例", "code": "raiseRate", "type": 3, "direction": 1, "jdbcType": 1, "orderNo": 2, "required": 1, "validateType": 1},
+    {"name": "影响行数", "code": "rows", "direction": 2, "jdbcType": 1, "orderNo": 3},
+    {"name": "状态码", "code": "status", "direction": 2, "jdbcType": 2, "orderNo": 4},
+    {"name": "状态说明", "code": "message", "direction": 2, "jdbcType": 2, "orderNo": 5}
   ]
 }
 
@@ -488,8 +488,8 @@ Content-Type: application/json
   "page": 0,
   "procedureName": "proc_emp_multi_cursor",
   "apiParamList": [
-    {"name": "部门汇总游标", "code": "deptData", "direction": 2, "jdbcType": "CURSOR", "orderNo": 1},
-    {"name": "高薪员工游标", "code": "topData", "direction": 2, "jdbcType": "CURSOR", "orderNo": 2}
+    {"name": "部门汇总游标", "code": "deptData", "direction": 2, "jdbcType": 6, "orderNo": 1},
+    {"name": "高薪员工游标", "code": "topData", "direction": 2, "jdbcType": 6, "orderNo": 2}
   ]
 }
 

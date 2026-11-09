@@ -14,8 +14,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.citics.glxtapi.web.constants.Constants.FILED_TYPE_INT;
-import static com.citics.glxtapi.web.constants.Constants.FILED_TYPE_LIST;
 import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_PARAM_DIRECTION_IN;
 import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_PARAM_DIRECTION_OUT;
 import static org.mockito.Mockito.when;
@@ -38,49 +36,42 @@ public class ApiServiceImplProcedureValidationTest {
     @Test(expected = MybatisPlusException.class)
     public void rejectsOrderNumbersWithGapsBeforeTheyCanBindTheWrongPosition() {
         validate(Arrays.asList(
-                procedureParam("first", PROCEDURE_PARAM_DIRECTION_IN, 4, FILED_TYPE_INT, 1),
-                procedureParam("third", PROCEDURE_PARAM_DIRECTION_IN, 4, FILED_TYPE_INT, 3)
-        ));
-    }
-
-    @Test(expected = MybatisPlusException.class)
-    public void rejectsCursorWhenBusinessTypeIsNotList() {
-        validate(Arrays.asList(
-                procedureParam("data", PROCEDURE_PARAM_DIRECTION_OUT, 8, FILED_TYPE_INT, 1)
+                procedureParam("first", PROCEDURE_PARAM_DIRECTION_IN, 1, 1),
+                procedureParam("third", PROCEDURE_PARAM_DIRECTION_IN, 1, 3)
         ));
     }
 
     @Test(expected = MybatisPlusException.class)
     public void rejectsDuplicateProcedureParameterCodes() {
         validate(Arrays.asList(
-                procedureParam("same", PROCEDURE_PARAM_DIRECTION_IN, 4, FILED_TYPE_INT, 1),
-                procedureParam("same", PROCEDURE_PARAM_DIRECTION_IN, 4, FILED_TYPE_INT, 2)
+                procedureParam("same", PROCEDURE_PARAM_DIRECTION_IN, 1, 1),
+                procedureParam("same", PROCEDURE_PARAM_DIRECTION_IN, 1, 2)
         ));
     }
 
     @Test(expected = MybatisPlusException.class)
     public void rejectsJdbcTypeOutsideTheDictionaryRange() {
         validate(Arrays.asList(
-                procedureParam("id", PROCEDURE_PARAM_DIRECTION_IN, 9, FILED_TYPE_INT, 1)
+                procedureParam("id", PROCEDURE_PARAM_DIRECTION_IN, 9, 1)
         ));
     }
 
     @Test(expected = MybatisPlusException.class)
     public void rejectsCursorForInoutDirection() {
         validate(Arrays.asList(
-                procedureParam("data", 3, 8, FILED_TYPE_LIST, 1)
+                procedureParam("data", 3, 6, 1)
         ));
     }
 
     @Test
-    public void acceptsCursorListAndKeepsNumericJdbcTypeForPersistence() {
-        ApiParam input = procedureParam("id", PROCEDURE_PARAM_DIRECTION_IN, 4, FILED_TYPE_INT, 1);
-        ApiParam cursor = procedureParam("data", PROCEDURE_PARAM_DIRECTION_OUT, 8, FILED_TYPE_LIST, 2);
+    public void acceptsCursorWithoutGeneralParameterTypeAndKeepsNumericJdbcTypeForPersistence() {
+        ApiParam input = procedureParam("id", PROCEDURE_PARAM_DIRECTION_IN, 1, 1);
+        ApiParam cursor = procedureParam("data", PROCEDURE_PARAM_DIRECTION_OUT, 6, 2);
 
         validate(Arrays.asList(input, cursor));
 
-        org.junit.Assert.assertEquals(Integer.valueOf(4), input.getJdbcType());
-        org.junit.Assert.assertEquals(Integer.valueOf(8), cursor.getJdbcType());
+        org.junit.Assert.assertEquals(Integer.valueOf(1), input.getJdbcType());
+        org.junit.Assert.assertEquals(Integer.valueOf(6), cursor.getJdbcType());
     }
 
     private void validate(List<ApiParam> params) {
@@ -90,13 +81,12 @@ public class ApiServiceImplProcedureValidationTest {
         ReflectionTestUtils.invokeMethod(service, "validateProcedureApi", dto, params, "demo");
     }
 
-    private ApiParam procedureParam(String code, Integer direction, Integer jdbcType, Integer type, Integer orderNo) {
+    private ApiParam procedureParam(String code, Integer direction, Integer jdbcType, Integer orderNo) {
         ApiParam param = new ApiParam();
         param.setName(code);
         param.setCode(code);
         param.setDirection(direction);
         param.setJdbcType(jdbcType);
-        param.setType(type);
         param.setOrderNo(orderNo);
         return param;
     }

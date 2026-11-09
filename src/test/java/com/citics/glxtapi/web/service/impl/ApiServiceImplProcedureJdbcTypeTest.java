@@ -15,14 +15,12 @@ public class ApiServiceImplProcedureJdbcTypeTest {
 
     @Test
     public void resolvesPersistedDictionaryValuesToJdbcTypeNames() {
-        assertEquals(PROCEDURE_JDBC_TYPE_VARCHAR, getProcedureJdbcTypeName(1));
-        assertEquals(PROCEDURE_JDBC_TYPE_INTEGER, getProcedureJdbcTypeName(2));
-        assertEquals(PROCEDURE_JDBC_TYPE_BIGINT, getProcedureJdbcTypeName(3));
-        assertEquals(PROCEDURE_JDBC_TYPE_DECIMAL, getProcedureJdbcTypeName(4));
-        assertEquals(PROCEDURE_JDBC_TYPE_DATE, getProcedureJdbcTypeName(5));
-        assertEquals(PROCEDURE_JDBC_TYPE_TIMESTAMP, getProcedureJdbcTypeName(6));
-        assertEquals(PROCEDURE_JDBC_TYPE_CLOB, getProcedureJdbcTypeName(7));
-        assertEquals(PROCEDURE_JDBC_TYPE_CURSOR, getProcedureJdbcTypeName(8));
+        assertEquals(PROCEDURE_JDBC_TYPE_NUMBER, getProcedureJdbcTypeName(1));
+        assertEquals(PROCEDURE_JDBC_TYPE_VARCHAR2, getProcedureJdbcTypeName(2));
+        assertEquals(PROCEDURE_JDBC_TYPE_DATE, getProcedureJdbcTypeName(3));
+        assertEquals(PROCEDURE_JDBC_TYPE_TIMESTAMP, getProcedureJdbcTypeName(4));
+        assertEquals(PROCEDURE_JDBC_TYPE_CLOB, getProcedureJdbcTypeName(5));
+        assertEquals(PROCEDURE_JDBC_TYPE_CURSOR, getProcedureJdbcTypeName(6));
         assertEquals(null, getProcedureJdbcTypeName(99));
     }
 
@@ -41,13 +39,13 @@ public class ApiServiceImplProcedureJdbcTypeTest {
         ApiParam input = new ApiParam();
         input.setCode("content");
         input.setDirection(1);
-        input.setJdbcType(7);
+        input.setJdbcType(5);
         input.setOrderNo(1);
 
         ApiParam output = new ApiParam();
         output.setCode("data");
         output.setDirection(2);
-        output.setJdbcType(8);
+        output.setJdbcType(6);
         output.setOrderNo(2);
 
         ApiInterfaceDTO dto = new ApiInterfaceDTO();

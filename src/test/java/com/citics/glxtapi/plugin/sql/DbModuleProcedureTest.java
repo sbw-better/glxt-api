@@ -21,7 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_VALUE_CLOB;
-import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_VALUE_VARCHAR;
+import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_JDBC_TYPE_VALUE_VARCHAR2;
 import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_PARAM_DIRECTION_IN;
 import static com.citics.glxtapi.web.constants.Constants.PROCEDURE_PARAM_DIRECTION_OUT;
 import static org.junit.Assert.assertEquals;
@@ -145,14 +145,12 @@ public class DbModuleProcedureTest {
     public void resolvesAllPersistedJdbcTypeValuesToSqlTypes() {
         DbModule dbModule = new DbModule(jdbcTemplate, null, tenantService);
 
-        assertEquals(Types.VARCHAR, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 1));
-        assertEquals(Types.INTEGER, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 2));
-        assertEquals(Types.BIGINT, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 3));
-        assertEquals(Types.DECIMAL, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 4));
-        assertEquals(Types.DATE, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 5));
-        assertEquals(Types.TIMESTAMP, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 6));
-        assertEquals(Types.CLOB, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 7));
-        assertEquals(-10, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 8));
+        assertEquals(Types.DECIMAL, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 1));
+        assertEquals(Types.VARCHAR, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 2));
+        assertEquals(Types.TIMESTAMP, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 3));
+        assertEquals(Types.TIMESTAMP, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 4));
+        assertEquals(Types.CLOB, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 5));
+        assertEquals(-10, (int) ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 6));
 
         try {
             ReflectionTestUtils.invokeMethod(dbModule, "getProcedureSqlType", 9);
@@ -167,7 +165,7 @@ public class DbModuleProcedureTest {
         param.setName(code);
         param.setCode(code);
         param.setDirection(direction);
-        param.setJdbcType(PROCEDURE_JDBC_TYPE_VALUE_VARCHAR);
+        param.setJdbcType(PROCEDURE_JDBC_TYPE_VALUE_VARCHAR2);
         param.setOrderNo(orderNo);
         return param;
     }

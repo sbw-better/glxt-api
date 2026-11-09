@@ -1,15 +1,15 @@
 # 存储过程 CLOB 配置
 
-CLOB 支持 IN、OUT、INOUT；`jdbcType` 提交数字字典值 `7`，业务参数类型 `type=1`。
+CLOB 支持 IN、OUT、INOUT；`jdbcType` 提交数字字典值 `5`（显示为 `CLOB`）。存储过程不再要求填写通用参数类型 `type`。
 是否必填、默认值及业务校验字段无需配置。
 
 测试过程见 clob-procedure-test.sql，参数按以下顺序配置：
 
 ```json
 [
-  {"name":"输入文本","code":"p_input","direction":1,"type":1,"jdbcType":7,"orderNo":1},
-  {"name":"输出文本","code":"p_output","direction":2,"type":1,"jdbcType":7,"orderNo":2},
-  {"name":"输入输出文本","code":"p_inout","direction":3,"type":1,"jdbcType":7,"orderNo":3}
+  {"name":"输入文本","code":"p_input","direction":1,"jdbcType":5,"orderNo":1},
+  {"name":"输出文本","code":"p_output","direction":2,"jdbcType":5,"orderNo":2},
+  {"name":"输入输出文本","code":"p_inout","direction":3,"jdbcType":5,"orderNo":3}
 ]
 ```
 
@@ -23,7 +23,7 @@ CLOB 支持 IN、OUT、INOUT；`jdbcType` 提交数字字典值 `7`，业务参�
 未传或显式 null 的输入绑定 SQL NULL；输出 SQL NULL 返回 JSON null。
 输出不自动解析成 JSON 对象，即使文本内容本身是 JSON。
 
-数据库 `JDBC_TYPE` 使用 `NUMBER(10)`，CLOB 对应字典值 `7`；执行时后端再解析为 `CLOB` JDBC 类型。
+数据库 `JDBC_TYPE` 使用 `NUMBER(10)`，CLOB 对应字典值 `5`；执行时后端再解析为 `CLOB` JDBC 类型。
 后端改动仅涉及存储过程校验、类型转换和 CallableStatement 调用，不修改普通 SQL 的绑定及结果读取。
 
 验证：使用超过 32767 字符的中文文本调用，比较完整返回内容；再验证 null 和空字符串。Oracle 对空字符串的具体表现需以实际驱动和数据库联调结果为准。

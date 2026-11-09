@@ -60,7 +60,7 @@ public class ApiParam extends Model<ApiParam> {
     private Integer direction;
 
     @TableField("JDBC_TYPE")
-    @ApiModelProperty("存储过程JDBC类型字典值：1-VARCHAR，2-INTEGER，3-BIGINT，4-DECIMAL，5-DATE，6-TIMESTAMP，7-CLOB，8-CURSOR")
+    @ApiModelProperty("存储过程Oracle类型字典值：1-NUMBER，2-VARCHAR2，3-DATE，4-TIMESTAMP，5-CLOB，6-SYS_REFCURSOR")
     @Excel(name = "存储过程JDBC类型")
     private Integer jdbcType;
 

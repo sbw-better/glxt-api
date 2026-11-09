@@ -735,8 +735,6 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
         for (ApiParam apiParam : apiParamList) {
             isFalse(StringUtils.isEmpty(apiParam.getName()), "存储过程参数名称不能为空，请核对！");
             isFalse(StringUtils.isEmpty(apiParam.getCode()), "存储过程参数编码不能为空，请核对！");
-            isFalse(apiParam.getType() == null, "存储过程参数类型不能为空，请核对！");
-            isFalse(!isSupportedProcedureParamType(apiParam.getType()), "存储过程参数类型不支持：" + apiParam.getType());
             isFalse(apiParam.getDirection() == null, "存储过程参数方向不能为空，请核对！");
             Integer jdbcType = apiParam.getJdbcType();
             isFalse(jdbcType == null, "存储过程参数JDBC类型不能为空，请核对！");
@@ -747,14 +745,11 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
                     "存储过程参数方向仅支持IN、OUT、INOUT，请核对！");
             isFalse(!isSupportedProcedureJdbcType(jdbcType),
                     "存储过程参数JDBC类型不支持：" + apiParam.getJdbcType());
-            // 前端、数据库和 Excel 统一存储 1~8 的 JDBC 类型字典值。
+            // 前端字典、数据库 NUMBER 列和 Excel 统一保存 1~6 的 Oracle 类型字典值。
             // 游标入参和INOUT游标在不同数据库驱动上差异大，一期只支持OUT游标。
             isFalse(PROCEDURE_JDBC_TYPE_VALUE_CURSOR == jdbcType
                     && !apiParam.getDirection().equals(PROCEDURE_PARAM_DIRECTION_OUT),
                     "存储过程CURSOR参数一期仅支持OUT方向，请核对！");
-            isFalse(PROCEDURE_JDBC_TYPE_VALUE_CURSOR == jdbcType
-                    && !Integer.valueOf(FILED_TYPE_LIST).equals(apiParam.getType()),
-                    "存储过程CURSOR参数类型必须为列表，请核对！");
             isFalse(codeSet.contains(apiParam.getCode()), "存储过程参数编码重复：" + apiParam.getCode());
             codeSet.add(apiParam.getCode());
             // ORDER_NO决定CallableStatement的?占位符位置；必须连续，不能只校验不重复。
@@ -779,14 +774,6 @@ public class ApiServiceImpl extends ServiceImpl<ApiMapper, ApiInterface> impleme
             }
         }
         return true;
-    }
-
-    private boolean isSupportedProcedureParamType(Integer type) {
-        return FILED_TYPE_STRING == type
-                || FILED_TYPE_INT == type
-                || FILED_TYPE_FLOAT == type
-                || FILED_TYPE_DATE == type
-                || FILED_TYPE_LIST == type;
     }
 
     private boolean isImportDefaultConnection(ApiInterfaceDTO dto) {

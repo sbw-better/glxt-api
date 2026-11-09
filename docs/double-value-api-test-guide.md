@@ -74,7 +74,7 @@ POST /api/interface/save
     {
       "code": "pNum",
       "direction": 3,
-      "jdbcType": "DECIMAL",
+      "jdbcType": 1,
       "orderNo": 1,
       "required": 1,
       "validateType": 1
@@ -130,7 +130,7 @@ POST /api/interface/preview
 
 - 返回字段包含 `type=2`。
 - 返回字段包含 `procedureName=double_value`。
-- 参数列表包含 `direction=3`、`jdbcType=DECIMAL`、`orderNo=1`。
+- 参数列表包含 `direction=3`、`jdbcType=1 (NUMBER)`、`orderNo=1`。
 - `have_page` 预期返回 `false`。
 
 ## 7. 正常执行测试
