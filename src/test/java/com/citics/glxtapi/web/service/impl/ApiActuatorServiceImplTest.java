@@ -86,6 +86,8 @@ public class ApiActuatorServiceImplTest {
     @Mock
     private DbModule dbModule;
     @Mock
+    private ProcedureTransactionService procedureTransactionService;
+    @Mock
     private HttpServletRequest request;
 
     private ApiActuatorServiceImpl service;
@@ -101,6 +103,7 @@ public class ApiActuatorServiceImplTest {
         ReflectionTestUtils.setField(service, "tenantAuthService", tenantAuthService);
         ReflectionTestUtils.setField(service, "connectionService", connectionService);
         ReflectionTestUtils.setField(service, "dbModule", dbModule);
+        ReflectionTestUtils.setField(service, "procedureTransactionService", procedureTransactionService);
         ReflectionTestUtils.setField(service, "sqlResultPageMaxRow", 5000);
 
         when(request.getHeader(anyString())).thenReturn(null);
@@ -194,13 +197,13 @@ public class ApiActuatorServiceImplTest {
         procedureResult.getCursors().put("data", Collections.singletonList(row("code", "A001")));
         procedureResult.setResultCount(1);
         when(apiService.getByApi("demo", "demoApi")).thenReturn(procedureApi);
-        when(dbModule.callProcedure(eq("PKG.PROC"), anyList(), anyMap(), eq(true), eq(API_FIELD_BACK_MODE_DEFAULT)))
+        when(procedureTransactionService.execute(eq("PKG.PROC"), anyList(), anyMap(), eq(API_FIELD_BACK_MODE_DEFAULT)))
                 .thenReturn(procedureResult);
 
         Object result = service.execute(PROCEDURE_BODY, request);
 
         assertSame(procedureResult, result);
-        verify(dbModule).callProcedure(eq("PKG.PROC"), anyList(), anyMap(), eq(true), eq(API_FIELD_BACK_MODE_DEFAULT));
+        verify(procedureTransactionService).execute(eq("PKG.PROC"), anyList(), anyMap(), eq(API_FIELD_BACK_MODE_DEFAULT));
         verify(dbModule, never()).select(anyString(), anyMap(), eq(true), eq(API_FIELD_BACK_MODE_DEFAULT));
     }
 
@@ -211,7 +214,7 @@ public class ApiActuatorServiceImplTest {
         procedureResult.getCursors().put("data", Collections.singletonList(row("code", "A001", "name", "demo")));
         procedureResult.setResultCount(1);
         when(apiService.getByApi("demo", "demoApi")).thenReturn(procedureApi);
-        when(dbModule.callProcedure(eq("PKG.PROC"), anyList(), anyMap(), eq(true), eq(API_FIELD_BACK_MODE_DEFAULT)))
+        when(procedureTransactionService.execute(eq("PKG.PROC"), anyList(), anyMap(), eq(API_FIELD_BACK_MODE_DEFAULT)))
                 .thenReturn(procedureResult);
 
         ApiActuatorExcelResult result = service.executeExcel(PROCEDURE_BODY, request);
@@ -235,7 +238,7 @@ public class ApiActuatorServiceImplTest {
         procedureResult.getOutParams().put("status", "0");
         procedureResult.getOutParams().put("message", "success");
         when(apiService.getByApi("demo", "demoApi")).thenReturn(procedureApi);
-        when(dbModule.callProcedure(eq("PKG.PROC"), anyList(), anyMap(), eq(true), eq(API_FIELD_BACK_MODE_DEFAULT)))
+        when(procedureTransactionService.execute(eq("PKG.PROC"), anyList(), anyMap(), eq(API_FIELD_BACK_MODE_DEFAULT)))
                 .thenReturn(procedureResult);
 
         ApiActuatorExcelResult result = service.executeExcel(PROCEDURE_BODY, request);
@@ -259,7 +262,7 @@ public class ApiActuatorServiceImplTest {
         procedureResult.getCursors().put("first", Collections.singletonList(row("id", 1)));
         procedureResult.getCursors().put("second", Collections.singletonList(row("id", 2)));
         when(apiService.getByApi("demo", "demoApi")).thenReturn(procedureApi);
-        when(dbModule.callProcedure(eq("PKG.PROC"), anyList(), anyMap(), eq(true), eq(API_FIELD_BACK_MODE_DEFAULT)))
+        when(procedureTransactionService.execute(eq("PKG.PROC"), anyList(), anyMap(), eq(API_FIELD_BACK_MODE_DEFAULT)))
                 .thenReturn(procedureResult);
 
         service.executeExcel(PROCEDURE_BODY, request);

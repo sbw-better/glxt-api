@@ -1,0 +1,70 @@
+{
+  "info": {
+    "name": "glxt-api Oracle Procedure Rollback Test",
+    "description": "Creates test API configs, executes a write-then-fail procedure, and asserts the inserted row was rolled back. Install procedure-rollback-test.sql first.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:15009" },
+    { "key": "tenant", "value": "REPLACE_WITH_TENANT" },
+    { "key": "token", "value": "REPLACE_WITH_EXECUTION_TOKEN" },
+    { "key": "systemCode", "value": "postman-rollback-test" },
+    { "key": "connectionId", "value": "REPLACE_WITH_NUMERIC_CONNECTION_ID" },
+    { "key": "rollbackApiCode", "value": "" },
+    { "key": "verifyApiCode", "value": "" },
+    { "key": "testId", "value": "" }
+  ],
+  "event": [{
+    "listen": "prerequest",
+    "script": { "type": "text/javascript", "exec": [
+      "if (!pm.collectionVariables.get('rollbackApiCode')) {",
+      "  const suffix = pm.variables.replaceIn('{{$guid}}').replace(/-/g, '').substring(0, 10);",
+      "  pm.collectionVariables.set('rollbackApiCode', 'rollbackProbe' + suffix);",
+      "  pm.collectionVariables.set('verifyApiCode', 'rollbackVerify' + suffix);",
+      "}"
+    ] }
+  }],
+  "item": [
+    {
+      "name": "1. Save failing procedure config",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/interface/save",
+        "body": { "mode": "raw", "raw": "{\n  \"tenant\": \"{{tenant}}\",\n  \"name\": \"回滚测试-执行后抛错\",\n  \"code\": \"{{rollbackApiCode}}\",\n  \"type\": 2,\n  \"description\": \"写入测试表后主动抛异常，用于验证事务回滚\",\n  \"orderNo\": 99001,\n  \"connectionId\": {{connectionId}},\n  \"fieldBackMode\": 1,\n  \"page\": 0,\n  \"procedureName\": \"PROC_ROLLBACK_PROBE_FAIL\",\n  \"apiParamList\": [{\"name\":\"测试ID\",\"code\":\"testId\",\"type\":1,\"direction\":1,\"jdbcType\":2,\"orderNo\":1,\"required\":1,\"validateType\":1}]\n}" }
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Config save returned HTTP success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });"] } }]
+    },
+    {
+      "name": "2. Save verification procedure config",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/interface/save",
+        "body": { "mode": "raw", "raw": "{\n  \"tenant\": \"{{tenant}}\",\n  \"name\": \"回滚测试-查询结果行数\",\n  \"code\": \"{{verifyApiCode}}\",\n  \"type\": 2,\n  \"description\": \"查询回滚测试ID是否残留\",\n  \"orderNo\": 99002,\n  \"connectionId\": {{connectionId}},\n  \"fieldBackMode\": 1,\n  \"page\": 0,\n  \"procedureName\": \"PROC_ROLLBACK_PROBE_CHECK\",\n  \"apiParamList\": [{\"name\":\"测试ID\",\"code\":\"testId\",\"type\":1,\"direction\":1,\"jdbcType\":2,\"orderNo\":1,\"required\":1,\"validateType\":1},{\"name\":\"行数\",\"code\":\"rowCount\",\"direction\":2,\"jdbcType\":1,\"orderNo\":2}]\n}" }
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Verification config save returned HTTP success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });"] } }]
+    },
+    {
+      "name": "3. Execute failing procedure",
+      "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["pm.collectionVariables.set('testId', 'rollback-' + Date.now() + '-' + Math.random().toString(16).slice(2, 10));"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/actuator/execute",
+        "body": { "mode": "raw", "raw": "{\n  \"tenant\": \"{{tenant}}\",\n  \"apiCode\": \"{{rollbackApiCode}}\",\n  \"token\": \"{{token}}\",\n  \"systemCode\": \"{{systemCode}}\",\n  \"params\": {\"testId\": \"{{testId}}\"}\n}" }
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Procedure raised the expected error', function () { pm.expect(pm.response.text()).to.include('ROLLBACK_PROBE_FORCED_FAILURE'); });", "console.log('Rollback testId:', pm.collectionVariables.get('testId'));", "pm.test('Test ID is available for verification', function () { pm.expect(pm.collectionVariables.get('testId')).to.be.a('string').and.not.empty; });"] } }]
+    },
+    {
+      "name": "4. Verify row was rolled back",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/actuator/execute",
+        "body": { "mode": "raw", "raw": "{\n  \"tenant\": \"{{tenant}}\",\n  \"apiCode\": \"{{verifyApiCode}}\",\n  \"token\": \"{{token}}\",\n  \"systemCode\": \"{{systemCode}}\",\n  \"params\": {\"testId\": \"{{testId}}\"}\n}" }
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Verification procedure succeeded', function () { pm.expect(pm.response.code).to.equal(200); pm.expect(pm.response.json().code).to.equal(0); });", "pm.test('Inserted row was rolled back', function () { pm.expect(pm.response.json().data.outParams.rowCount).to.equal(0); });"] } }]
+    }
+  ]
+}

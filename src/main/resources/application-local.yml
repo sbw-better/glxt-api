@@ -6,12 +6,12 @@ spring:
       discovery:
         enabled: false
   datasource:
-    url: jdbc:h2:mem:glxt_api;MODE=Oracle;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    username: sa
-    password:
-    driver-class-name: org.h2.Driver
+    driver-class-name: oracle.jdbc.OracleDriver
+    url: ${ORACLE_URL:jdbc:oracle:thin:@//127.0.0.1:1521/FREEPDB1}
+    username: ${ORACLE_USERNAME:GLXT}
+    password: ${ORACLE_PASSWORD:Glxt123456}
     druid:
-      validation-query: SELECT 1
+      validation-query: SELECT 1 FROM DUAL
   h2:
     console:
       enabled: true

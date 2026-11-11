@@ -57,6 +57,8 @@ public class ApiActuatorServiceImpl extends ServiceImpl<ApiActuatorMapper, ApiAc
     private ConnectionService connectionService;
     @Resource
     private DbModule dbModule;
+    @Resource
+    private ProcedureTransactionService procedureTransactionService;
 
     @Value("${common.execute_test_max_count}")
     private int executeTestMaxCount;
@@ -123,14 +125,15 @@ public class ApiActuatorServiceImpl extends ServiceImpl<ApiActuatorMapper, ApiAc
         Map<String, Object> paramsMap = procedureInfoCheck(apiInterfaceVO, apiActuatorInfoJson, ip);
 
         try {
-            // 存储过程复用接口配置的数据源切换规则，但不在外层主动开启事务。
+            // 先设置动态数据源，再通过独立 Spring Bean 的代理方法开启事务；
+            // 这样事务管理器获取的连接与后续 JdbcTemplate 调用路由到同一目标数据源。
             if (apiInterfaceVO.getConnectionId().equals(API_DEFAULT_DATA_SOURCE_ID)) {
                 this.tenantService.clearDs();
             } else {
                 this.tenantService.setDs(connectionService.getById(apiInterfaceVO.getConnectionId()).getCode() + "_" + DdConstants.MASTER);
             }
-            return dbModule.callProcedure(apiInterfaceVO.getProcedureName(), apiInterfaceVO.getApiParamList(),
-                    paramsMap, true, apiInterfaceVO.getFieldBackMode());
+            return procedureTransactionService.execute(apiInterfaceVO.getProcedureName(), apiInterfaceVO.getApiParamList(),
+                    paramsMap, apiInterfaceVO.getFieldBackMode());
         } catch (Exception e) {
             e.printStackTrace();
             throw new APIException("存储过程执行错误：" + e.getMessage());
